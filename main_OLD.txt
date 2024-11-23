@@ -1,0 +1,407 @@
+package main
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/google/go-github/v39/github"
+	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/oauth2"
+)
+
+type Cluster struct {
+	ID       int
+	Name     string
+	Endpoint string
+}
+
+type ClusterMember struct {
+	ID          int
+	ClusterID   int
+	Name        string
+	IP          string
+	Hostname    string
+	MachineID   string
+	Role        string
+	Status      string
+	LastUpdated time.Time
+}
+
+type TalosVersionManager struct {
+	githubClient            *github.Client
+	webServer               *http.Server
+	db                      *sql.DB
+	currentInstalledVersion string
+	latestRemoteVersion     string
+}
+
+func (m *TalosVersionManager) runCommand(command string, args ...string) (string, error) {
+	cmd := exec.Command(command, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", string(output), err)
+	}
+	return string(output), nil
+}
+
+func (m *TalosVersionManager) initDatabase() error {
+	dbDir := filepath.Join(os.Getenv("HOME"), ".talos-manager")
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
+		return err
+	}
+
+	dbPath := filepath.Join(dbDir, "talos_clusters_old.db")
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS clusters (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT UNIQUE,
+			endpoint TEXT
+		);
+
+		CREATE TABLE IF NOT EXISTS cluster_members (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			cluster_id INTEGER,
+			name TEXT,
+			ip TEXT,
+			hostname TEXT,
+			machine_id TEXT UNIQUE,
+			role TEXT,
+			status TEXT,
+			last_updated DATETIME,
+			FOREIGN KEY(cluster_id) REFERENCES clusters(id)
+		);
+
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_machine_id ON cluster_members(machine_id);
+	`)
+	if err != nil {
+		return err
+	}
+
+	m.db = db
+	return nil
+}
+
+func (m *TalosVersionManager) upsertCluster(name, endpoint string) (int, error) {
+	result, err := m.db.Exec(`
+		INSERT OR REPLACE INTO clusters (name, endpoint) 
+		VALUES (?, ?)
+	`, name, endpoint)
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := result.LastInsertId()
+	return int(id), err
+}
+
+func (m *TalosVersionManager) upsertClusterMembers(clusterID int, members []ClusterMember) error {
+	tx, err := m.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.Prepare(`
+		INSERT OR REPLACE INTO cluster_members 
+		(cluster_id, name, ip, hostname, machine_id, role, status, last_updated)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	now := time.Now()
+	for _, member := range members {
+		_, err = stmt.Exec(
+			clusterID,
+			member.Name,
+			member.IP,
+			member.Hostname,
+			member.MachineID,
+			member.Role,
+			member.Status,
+			now,
+		)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (m *TalosVersionManager) fetchLatestRelease() error {
+	ctx := context.Background()
+	release, _, err := m.githubClient.Repositories.GetLatestRelease(ctx, "siderolabs", "talos")
+	if err != nil {
+		return err
+	}
+	m.latestRemoteVersion = release.GetTagName()
+	return nil
+}
+
+func (m *TalosVersionManager) getCurrentInstalledVersion() error {
+	output, err := m.runCommand("talosctl", "version")
+	if err != nil {
+		return err
+	}
+	m.currentInstalledVersion = strings.TrimSpace(output)
+	return nil
+}
+
+func (m *TalosVersionManager) listAndStoreClusterMembers() ([]ClusterMember, error) {
+	output, err := m.runCommand("talosctl", "get", "members")
+	if err != nil {
+		return nil, err
+	}
+
+	var members []ClusterMember
+	lines := strings.Split(output, "\n")
+
+	for _, line := range lines[1:] {
+		if line == "" {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) >= 6 {
+			member := ClusterMember{
+				Name:      fields[0],
+				IP:        fields[1],
+				Hostname:  fields[2],
+				MachineID: fields[3],
+				Role:      fields[4],
+				Status:    fields[5],
+			}
+			members = append(members, member)
+		}
+	}
+
+	clusterID, err := m.upsertCluster("main-cluster", "https://cluster.local")
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.upsertClusterMembers(clusterID, members)
+	if err != nil {
+		return nil, err
+	}
+
+	return members, nil
+}
+
+func (m *TalosVersionManager) getClusterMembers(clusterID int) ([]ClusterMember, error) {
+	rows, err := m.db.Query(`
+		SELECT id, name, ip, hostname, machine_id, role, status, last_updated 
+		FROM cluster_members 
+		WHERE cluster_id = ?
+	`, clusterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var members []ClusterMember
+	for rows.Next() {
+		var member ClusterMember
+		err := rows.Scan(
+			&member.ID,
+			&member.Name,
+			&member.IP,
+			&member.Hostname,
+			&member.MachineID,
+			&member.Role,
+			&member.Status,
+			&member.LastUpdated,
+		)
+		if err != nil {
+			return nil, err
+		}
+		member.ClusterID = clusterID
+		members = append(members, member)
+	}
+
+	return members, nil
+}
+
+func (m *TalosVersionManager) startWebServer() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		members, err := m.getClusterMembers(1)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		membersHTML := ""
+		for _, member := range members {
+			membersHTML += fmt.Sprintf(`
+				<tr>
+					<td>%s</td>
+					<td>%s</td>
+					<td>%s</td>
+					<td>%s</td>
+					<td>%s</td>
+					<td>%s</td>
+					<td>%s</td>
+				</tr>
+			`, member.Name, member.IP, member.Hostname, member.MachineID, member.Role, member.Status, member.LastUpdated.Format(time.RFC3339))
+		}
+
+		html := fmt.Sprintf(`
+			<html>
+				<head>
+					<style>
+						body { font-family: Arial, sans-serif; }
+						table { border-collapse: collapse; width: 100%%; }
+						th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+						th { background-color: #f2f2f2; }
+					</style>
+				</head>
+				<body>
+					<h1>Talos Cluster Manager</h1>
+					<p>Latest Remote Version: %s</p>
+					<p>Installed Version: %s</p>
+					<h2>Cluster Members</h2>
+					<table>
+						<tr>
+							<th>Name</th>
+							<th>IP</th>
+							<th>Hostname</th>
+							<th>Machine ID</th>
+							<th>Role</th>
+							<th>Status</th>
+							<th>Last Updated</th>
+						</tr>
+						%s
+					</table>
+				</body>
+			</html>
+		`, m.latestRemoteVersion, m.currentInstalledVersion, membersHTML)
+		w.Write([]byte(html))
+	})
+
+	m.webServer = &http.Server{Addr: ":8080"}
+	go func() {
+		if err := m.webServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("HTTP server error: %v", err)
+		}
+	}()
+}
+
+func (m *TalosVersionManager) scheduleClusterSync() {
+	ticker := time.NewTicker(15 * time.Minute)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				if err := m.fetchLatestRelease(); err != nil {
+					log.Printf("Failed to fetch latest release: %v", err)
+				}
+
+				if err := m.getCurrentInstalledVersion(); err != nil {
+					log.Printf("Failed to get current version: %v", err)
+				}
+
+				_, err := m.listAndStoreClusterMembers()
+				if err != nil {
+					log.Printf("Failed to sync cluster members: %v", err)
+				}
+
+				// Ajout de la logique de mise à jour automatique
+				if m.latestRemoteVersion != m.currentInstalledVersion {
+					if err := m.upgradeSystem(); err != nil {
+						log.Printf("System upgrade failed: %v", err)
+					}
+					if err := m.upgradeKubernetes(); err != nil {
+						log.Printf("Kubernetes upgrade failed: %v", err)
+					}
+				}
+			}
+		}
+	}()
+}
+
+func (m *TalosVersionManager) upgradeSystem() error {
+	_, err := m.runCommand(
+		"talosctl",
+		"upgrade",
+		"-n", "nodeIP",
+		"--image", m.latestRemoteVersion,
+		"--preserve=true",
+	)
+	return err
+}
+
+func (m *TalosVersionManager) upgradeKubernetes() error {
+	_, err := m.runCommand(
+		"talosctl",
+		"upgrade-k8s",
+		"-n", "nodeIP",
+		"--to", m.latestRemoteVersion,
+	)
+	return err
+}
+
+func NewTalosVersionManager(githubToken string) (*TalosVersionManager, error) {
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: githubToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+
+	manager := &TalosVersionManager{
+		githubClient: github.NewClient(tc),
+	}
+
+	if err := manager.initDatabase(); err != nil {
+		return nil, err
+	}
+
+	return manager, nil
+}
+
+func main() {
+	githubToken := os.Getenv("GITHUB_TOKEN")
+	if githubToken == "" {
+		log.Fatal("GitHub token is required")
+	}
+
+	manager, err := NewTalosVersionManager(githubToken)
+	if err != nil {
+		log.Fatalf("Failed to initialize manager: %v", err)
+	}
+
+	// Synchronisation initiale des membres du cluster
+	_, err = manager.listAndStoreClusterMembers()
+	if err != nil {
+		log.Fatalf("Failed to initial cluster members sync: %v", err)
+	}
+
+	// Récupération initiale des versions
+	if err := manager.fetchLatestRelease(); err != nil {
+		log.Fatalf("Failed to fetch latest release: %v", err)
+	}
+	if err := manager.getCurrentInstalledVersion(); err != nil {
+		log.Fatalf("Failed to get current version: %v", err)
+	}
+
+	manager.startWebServer()
+	manager.scheduleClusterSync()
+
+	// Bloquer le programme principal
+	select {}
+}
