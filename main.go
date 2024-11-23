@@ -492,12 +492,6 @@ func (m *TalosVersionManager) startWebServer() {
 				<head>
 					<title>Talos Cockpit</title>
 					<style>
-						body { 
-							font-family: Arial, sans-serif; 
-							max-width: 1200px; 
-							margin: 0 auto; 
-							padding: 20px;
-						}
 						.client-info { 
 							background-color: #f0f0f0; 
 							padding: 10px; 
@@ -518,11 +512,98 @@ func (m *TalosVersionManager) startWebServer() {
 							background-color: #f2f2f2; 
 							font-weight: bold;
 						}
+						/* (PART A) SHARED */
+						/* (PART A1) STANDARD FONT & BOX SIZING */
+						* {
+						font-family: Arial, Helvetica, sans-serif;
+						box-sizing: border-box;
+						}
+
+						/* (PART A2) COLOR & PADDING */
+						#top, #side { color: #f54714; background: #37304b; }
+						#top, #side, #main, #slinks { padding: 10px; }
+
+						/* (PART A3) FLEX LAYOUT */
+						html, body, #top, #bottom { display: flex; }
+						#bottom, #main { flex-grow: 1; }
+
+						/* (PART B) BODY - SPLIT TOP-BOTTOM */
+						html, body {
+						padding: 0; margin: 0; min-height: 100vh;
+						flex-direction: column;
+						}
+
+						/* (PART C) TOP NAV BAR */
+						#top {
+						position: sticky; height: 50px;
+						align-items: center;
+						}
+
+						/* (PART D1) SIDEBAR */
+						#side { width: 220px; transition: all 0.2s; }
+
+
+						/* (PART D3) SIDEBAR LINKS */
+						#slinks a {
+						display: block;
+						padding: 10px 8px; margin-bottom: 5px;
+						color: #fff; text-decoration: none;
+						}
+						#slinks a:hover, #slinks a.now {
+						background: #111; border-radius: 10px;
+						}
+						#slinks i { font-style: normal; }
+
+						/* (PART E) RESPONSIVE */
+						/* (PART E1) SIDEBAR TOGGLE BUTTON */
+						#stog {
+						display: none; cursor: pointer;
+						font-size: 28px; margin-right: 10px;
+						}
+
+						/* (PART E2) ON SMALL SCREENS */
+						@media screen and (max-width: 600px) {
+						/* (PART E2-1) SHOW TOGGLE BUTTON */
+						#stog { display: block; }
+
+						/* (PART E2-2) SHRINK SIDEBAR */
+						#side.mini { width: 100px; }
+						#side.mini #upic { width: 60px; height: 60px; }
+						#side.mini #uname, #side.mini #uacct, #side.mini #slinks span { display: none; }
+						#side.mini #slinks a { text-align: center; }
+						#side.mini #slinks i { font-size: 32px; }
+						}
 					</style>
 				</head>
 				<body>
+					<!-- (PART A) TOP NAV BAR -->
+					<nav id="top">
+					<!-- (PART A1) SIDEBAR TOGGLE -->
+					<div id="stog" onclick="document.getElementById('side').classList.toggle('mini')">
+						&#9776;
+					</div>
+
+					<!-- (PART A2) LOGO & WHATEVER ELSE -->
+					<h1>Talos Cockpit</h1>
+					</nav>
+
+					<!-- (PART B) BOTTOM CONTENT -->
+					<div id="bottom">
+					<!-- (PART B1) SIDEBAR -->
+					<nav id="side" class="mini">
+
+						<!-- (PART B1-2) LINKS -->
+						<div id="slinks">
+						<a href="#">
+							<i>&#9733;</i> <span>Section</span>
+						</a>
+						</div>
+					</nav>
+
+					<!-- (PART B2) MAIN CONTENT -->
+					<main id="main">
 					<div class="client-info">
-						Machine ayant traité votre requête : %s
+					Machine ayant traité votre requête : %s
 					</div>
 					<h1>Talos Cluster Manager</h1>
 					<p>ID du Cluster : %s</p>
@@ -530,17 +611,19 @@ func (m *TalosVersionManager) startWebServer() {
 					<p>Version installée : %s</p>
 					<h2>Membres du Cluster</h2>
 					<table>
-						<tr>
-							<th>Namespace</th>
-							<th>ID</th>
-							<th>Hostname</th>
-							<th>Machine Type</th>
-							<th>Config Version</th>
-							<th>OS Version</th>
-							<th>Adresses</th>
-						</tr>
-						%s
+					<tr>
+						<th>Namespace</th>
+						<th>ID</th>
+						<th>Hostname</th>
+						<th>Machine Type</th>
+						<th>Config Version</th>
+						<th>OS Version</th>
+						<th>Adresses</th>
+					</tr>
+					 %s
 					</table>
+					</main>
+					</div>
 				</body>
 			</html>
 		`, clientIP, clusterID, m.latestOsVersion, m.ConfigVersion, membersHTML)
