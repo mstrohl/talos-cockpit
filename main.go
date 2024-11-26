@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"text/template"
 	"time"
 
 	"encoding/json"
@@ -22,6 +23,9 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v2"
 )
+
+var Syscheckbox string
+var K8scheckbox string
 
 // Cluster représente les informations de base sur un cluster Kubernetes
 type Cluster struct {
@@ -39,9 +43,12 @@ type ClusterMember struct {
 	Hostname        string
 	Role            string
 	ConfigVersion   json.Number
-	latestOsVersion string
+	LatestOsVersion string
 	IP              string
+	CreatedAt       time.Time
 	LastUpdated     time.Time
+	SysUpdate       bool
+	K8sUpdate       bool
 }
 
 // TalosVersionManager gère les opérations sur le cluster Talos
@@ -50,8 +57,10 @@ type TalosVersionManager struct {
 	webServer       *http.Server
 	db              *sql.DB
 	ConfigVersion   string
-	latestOsVersion string
+	LatestOsVersion string
 	clientInfo      string
+	SysUpdate       bool
+	K8sUpdate       bool
 }
 
 // filterIPv4Addresses filtre et ne conserve que les adresses IPv4 valides
@@ -155,7 +164,10 @@ func (m *TalosVersionManager) initDatabase() error {
 			config_version TEXT,
 			os_version TEXT,
 			addresses TEXT,
+			created_at DATETIME,
 			last_updated DATETIME,
+			auto_sys_update TEXT,
+			auto_k8s_update TEXT,
 			FOREIGN KEY(cluster_id) REFERENCES clusters(name)
 		);
 
@@ -206,6 +218,7 @@ func (m *TalosVersionManager) listAndStoreClusterMembers() ([]ClusterMember, err
 			Type          string      `json:"type"`
 			ID            string      `json:"id"`
 			ConfigVersion json.Number `json:"version"`
+			Updated       time.Time   `json:"updated"`
 		} `json:"metadata"`
 		Spec struct {
 			Hostname    string   `json:"hostname"`
@@ -221,9 +234,10 @@ func (m *TalosVersionManager) listAndStoreClusterMembers() ([]ClusterMember, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %v", err)
 	}
+	// Debug
 	// sortie yaml brute
-	log.Printf("Sortie Brute:")
-	println(output)
+	//log.Printf("Sortie Brute:")
+	//println(output)
 
 	var members []ClusterMember
 
@@ -231,8 +245,10 @@ func (m *TalosVersionManager) listAndStoreClusterMembers() ([]ClusterMember, err
 	//if len(memberList) > 0 {
 	//	m.clientInfo = memberList.Spec
 	//}
-	log.Printf("Member List:")
-	fmt.Printf("%+v\n", memberList)
+
+	// DEBUG
+	//log.Printf("Member List:")
+	//fmt.Printf("%+v\n", memberList)
 
 	// Transformer les données membres
 	for _, memberData := range memberList {
@@ -243,15 +259,18 @@ func (m *TalosVersionManager) listAndStoreClusterMembers() ([]ClusterMember, err
 			Hostname:        memberData.Spec.Hostname,
 			Role:            memberData.Spec.MachineType,
 			ConfigVersion:   memberData.Metadata.ConfigVersion,
-			latestOsVersion: strings.TrimLeft(strings.TrimRight(memberData.Spec.OsVersion, ")"), "Talos ("),
+			LatestOsVersion: strings.TrimLeft(strings.TrimRight(memberData.Spec.OsVersion, ")"), "Talos ("),
 			IP:              strings.Join(memberData.Spec.Addresses, ", "),
+			LastUpdated:     memberData.Metadata.Updated,
+			SysUpdate:       false,
+			K8sUpdate:       false,
 		}
 		members = append(members, member)
 	}
-	log.Printf("Liste:")
-	for _, memberData := range memberList {
-		println(memberData.Metadata.ID)
-	}
+	//log.Printf("Liste:")
+	//for _, memberData := range memberList {
+	//	println(memberData.Metadata.ID)
+	//}
 
 	// Insérer ou mettre à jour le cluster
 	_, err = m.upsertCluster(clusterID, "https://kubernetes.default.svc.cluster.local")
@@ -276,9 +295,9 @@ func (m *TalosVersionManager) upsertClusterMembers(clusterID string, members []C
 	}
 
 	stmt, err := tx.Prepare(`
-		INSERT OR REPLACE INTO cluster_members 
-		(cluster_id, namespace, member_id, hostname, machine_type, config_version, os_version, addresses, last_updated)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT OR IGNORE INTO cluster_members 
+		(cluster_id, namespace, member_id, hostname, machine_type, config_version, os_version, addresses, created_at, last_updated, auto_sys_update, auto_k8s_update)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return err
@@ -295,9 +314,12 @@ func (m *TalosVersionManager) upsertClusterMembers(clusterID string, members []C
 			member.Hostname,
 			member.Role,
 			member.ConfigVersion,
-			strings.TrimLeft(strings.TrimRight(member.latestOsVersion, ")"), "Talos ("),
+			strings.TrimLeft(strings.TrimRight(member.LatestOsVersion, ")"), "Talos ("),
 			member.IP,
 			now,
+			member.LastUpdated,
+			false,
+			false,
 		)
 		if err != nil {
 			tx.Rollback()
@@ -320,7 +342,10 @@ func (m *TalosVersionManager) getClusterMembers(clusterID string) ([]ClusterMemb
 			config_version, 
 			os_version, 
 			addresses, 
-			last_updated 
+			created_at,
+			last_updated,
+			auto_sys_update,
+			auto_k8s_update
 		FROM cluster_members 
 		WHERE cluster_id = ?
 	`, clusterID)
@@ -340,9 +365,12 @@ func (m *TalosVersionManager) getClusterMembers(clusterID string) ([]ClusterMemb
 			&member.Hostname,
 			&member.Role,
 			&member.ConfigVersion,
-			&member.latestOsVersion,
+			&member.LatestOsVersion,
 			&member.IP,
+			&member.CreatedAt,
 			&member.LastUpdated,
+			&member.SysUpdate,
+			&member.K8sUpdate,
 		)
 		member.ClusterID = clusterID
 
@@ -362,7 +390,7 @@ func (m *TalosVersionManager) fetchLatestRelease() error {
 	if err != nil {
 		return err
 	}
-	m.latestOsVersion = release.GetTagName()
+	m.LatestOsVersion = release.GetTagName()
 	return nil
 }
 
@@ -377,26 +405,61 @@ func (m *TalosVersionManager) getConfigVersion() error {
 }
 
 // upgradeSystem effectue la mise à jour du système Talos
-func (m *TalosVersionManager) upgradeSystem() error {
+func (m *TalosVersionManager) upgradeSystem(node string) error {
 	_, err := m.runCommand(
 		"talosctl",
 		"upgrade",
-		"-n", "nodeIP",
-		"--image", m.latestOsVersion,
+		"-n", node,
+		"--image", m.LatestOsVersion,
 		"--preserve=true",
 	)
+	log.Printf("talosctl upgrade -n %s --image %s --preserve=true", node, m.LatestOsVersion)
 	return err
 }
 
 // upgradeKubernetes effectue la mise à jour de Kubernetes
-func (m *TalosVersionManager) upgradeKubernetes() error {
+func (m *TalosVersionManager) upgradeKubernetes(controller string) error {
 	_, err := m.runCommand(
 		"talosctl",
 		"upgrade-k8s",
-		"-n", "nodeIP",
-		"--to", m.latestOsVersion,
+		"-n", controller,
+		"--to", m.LatestOsVersion,
 	)
+	log.Printf("talosctl upgrade-k8s -n %s --to %s", controller, m.LatestOsVersion)
 	return err
+}
+
+func (m *TalosVersionManager) updateMemberInfo(version string, clusterID string, members []ClusterMember) error {
+	tx, err := m.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.Prepare(`
+		UPDATE cluster_members 
+		set os_version = ? , last_updated = ? 
+		where cluster_id = ? AND member_id = ?
+	`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	//now := time.Now()
+	for _, member := range members {
+		_, err = stmt.Exec(
+			version,
+			member.LastUpdated,
+			member.MachineID,
+			clusterID,
+		)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 // scheduleClusterSync gère la synchronisation périodique du cluster
@@ -418,16 +481,38 @@ func (m *TalosVersionManager) scheduleClusterSync() {
 				if err != nil {
 					log.Printf("Échec de la synchronisation des membres du cluster : %v", err)
 				}
+				// Récupérer dynamiquement l'ID du cluster
+				clusterID, err := m.getClusterID()
+				if err != nil {
+					log.Printf("Impossible de récupérer l'ID du cluster")
+					return
+				}
+				members, err := m.getClusterMembers(clusterID)
+				if err != nil {
+					log.Printf("Erreur de récupération de la liste des membres")
+					return
+				}
+				for _, member := range members {
+					if m.LatestOsVersion != m.ConfigVersion {
 
-				if m.latestOsVersion != m.ConfigVersion {
-					if err := m.upgradeSystem(); err != nil {
-						log.Printf("Échec de la mise à jour du système : %v", err)
-					}
-
-					if err := m.upgradeKubernetes(); err != nil {
-						log.Printf("Échec de la mise à jour de Kubernetes : %v", err)
+						if member.SysUpdate {
+							if err := m.upgradeSystem(member.Hostname); err != nil {
+								log.Printf("Échec de la mise à jour du système : %v", err)
+							}
+						} else {
+							log.Printf("Auto Update Sytem désactivé pour le node: %s", member.Hostname)
+						}
 					}
 				}
+				ctl, _ := m.getNodeIP()
+				if m.K8sUpdate {
+					if err := m.upgradeKubernetes(ctl); err != nil {
+						log.Printf("Échec de la mise à jour de Kubernetes : %v", err)
+					}
+				} else {
+					log.Printf("Auto Update Kubernetes désactivé pour le cluster: %s", clusterID)
+				}
+
 			}
 		}
 	}()
@@ -460,11 +545,21 @@ func (m *TalosVersionManager) startWebServer() {
 			log.Printf("Échec de la récupération du NodeIP : %v", err)
 		}
 		//DEBUG
-		log.Printf("Liste des member ds startwebserver")
-		log.Println(members)
+		//log.Printf("Liste des member ds startwebserver")
+		//log.Println(members)
 
 		membersHTML := ""
 		for _, member := range members {
+			if member.SysUpdate {
+				Syscheckbox = "Enable"
+			} else {
+				Syscheckbox = "Disable"
+			}
+			if m.K8sUpdate {
+				K8scheckbox = "checked"
+			} else {
+				K8scheckbox = ""
+			}
 			membersHTML += fmt.Sprintf(`
 				<tr>
 					<td>%s</td>
@@ -474,6 +569,11 @@ func (m *TalosVersionManager) startWebServer() {
 					<td>%s</td>
 					<td>%s</td>
 					<td>%s</td>
+					<td>%s</td>
+					<td><b>%s</b></td>
+					<td>
+					<a href="/edit?member_id=%s">Éditer</a>
+					</td>
 				</tr>
 			`,
 				member.Namespace,
@@ -482,13 +582,17 @@ func (m *TalosVersionManager) startWebServer() {
 				member.Hostname,
 				member.Role,
 				member.ConfigVersion,
-				member.latestOsVersion,
+				member.LatestOsVersion,
 				member.IP,
+				member.LastUpdated,
+				Syscheckbox,
+				member.MachineID,
 			)
 		}
 
 		html := fmt.Sprintf(`
 			<html>
+			<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
 				<head>
 					<title>Talos Cockpit</title>
 					<style>
@@ -610,6 +714,9 @@ func (m *TalosVersionManager) startWebServer() {
 					<p>Dernière version disponible : %s</p>
 					<p>Version installée : %s</p>
 					<h2>Membres du Cluster</h2>
+					<div class="toggle">
+					<h3><b> Auto Update K8S : </b><input type="checkbox" id="auto_k8s_update" name="auto_k8s_update" %s></h3>
+					</div>
 					<table>
 					<tr>
 						<th>Namespace</th>
@@ -619,6 +726,9 @@ func (m *TalosVersionManager) startWebServer() {
 						<th>Config Version</th>
 						<th>OS Version</th>
 						<th>Adresses</th>
+						<th>Updated at</th>
+						<th>Auto Sys Update</th>
+						<th>Action</th>
 					</tr>
 					 %s
 					</table>
@@ -626,7 +736,7 @@ func (m *TalosVersionManager) startWebServer() {
 					</div>
 				</body>
 			</html>
-		`, clientIP, clusterID, m.latestOsVersion, m.ConfigVersion, membersHTML)
+		`, clientIP, clusterID, m.LatestOsVersion, m.ConfigVersion, K8scheckbox, membersHTML)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write([]byte(html))
@@ -646,32 +756,199 @@ func (m *TalosVersionManager) startWebServer() {
 	}()
 }
 
+func handleNodeEdit(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	// Récupérer l'ID de l'utilisateur (s'il existe)
+	idStr := r.URL.Query().Get("member_id")
+
+	var member ClusterMember
+	if idStr != "" {
+		// Récupérer l'utilisateur existant
+		err := db.QueryRow("SELECT member_id, os_version, auto_sys_update FROM cluster_members WHERE member_id = ?", idStr).Scan(&member.MachineID, &member.LatestOsVersion, &member.SysUpdate)
+		// Débogage explicite
+		if err != nil {
+			if err == sql.ErrNoRows {
+				fmt.Printf("Aucun utilisateur trouvé pour l'ID : %s\n", idStr)
+			} else {
+				fmt.Printf("Erreur de scan : %v\n", err)
+
+				// Vérification des valeurs avant le scan
+				row := db.QueryRow("SELECT member_id, name, email FROM users WHERE member_id = \"?\"", idStr)
+				var member_id, os_version, auto_sys_update string
+				scanErr := row.Scan(&member_id, &os_version, &auto_sys_update)
+
+				fmt.Printf("Valeurs récupérées - member_id: %s, os_version: %s, auto_sys_update: %s\n", member_id, os_version, auto_sys_update)
+				fmt.Printf("Erreur de scan détaillée : %v\n", scanErr)
+			}
+		}
+	}
+
+	// Template pour le formulaire d'édition
+	tmpl := `
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<title>Éditer Node</title>
+	</head>
+	<body>
+		<h1>Éditer Node</h1>
+		<form action="/update" method="post">
+			<label>MachineID :</label><br>
+			<input type="text" name="member_id" value="{{.MachineID}}" readonly><br><br>
+			
+			<label>LatestOsVersion :</label><br>
+			<input type="text" name="LatestOsVersion" value="{{.LatestOsVersion}}" readonly><br><br>
+
+			<label>Auto Update Système :</label><br>
+			<select list="auto_sys_update" name="auto_sys_update">
+				<option value=true {{if .SysUpdate}} selected="selected" {{end}}>True</option>
+				<option value=false {{if not .SysUpdate}} selected="selected" {{end}}>False</option>
+			</select>
+			<input type="submit" value="Mettre à jour">
+		</form>
+		<br>
+		<a href="/">Retour à la liste</a>
+	</body>
+	</html>
+	`
+
+	t, err := template.New("editNode").Parse(tmpl)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = t.Execute(w, member)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func handleNodeUpdate(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	// Vérifier que c'est bien un POST
+	if r.Method != "POST" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Récupérer les données du formulaire
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "Erreur de parsing du formulaire", http.StatusBadRequest)
+		return
+	}
+
+	//cluster_id,
+	//namespace,
+	//member_id,
+	//hostname,
+	//machine_type,
+	//config_version,
+	//os_version,
+	//addresses,
+	//created_at,
+	//last_updated,
+	//auto_sys_update,
+	//auto_k8s_update
+
+	// Récupérer les valeurs
+	MachineID := r.Form.Get("member_id")
+	log.Printf("member_id : %s", MachineID)
+	SysUpdate := r.Form.Get("auto_sys_update")
+	log.Printf("auto_sys_updates : %s", SysUpdate)
+
+	if SysUpdate == "" {
+		// Débogage de l'insertion/mise à jour
+		var result sql.Result
+		// Mise à jour d'un noeud existant
+		result, err = db.Exec("UPDATE cluster_members SET auto_sys_update = false WHERE member_id = ?", MachineID)
+
+		log.Println(result)
+
+		if err != nil {
+			log.Printf("Erreur de mise à jour : %v", err)
+			http.Error(w, "Erreur de mise à jour", http.StatusInternalServerError)
+			return
+		}
+
+		// Vérification du résultat
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			log.Printf("Impossible de vérifier les lignes affectées : %v", err)
+		}
+		log.Printf("Lignes affectées : %d", rowsAffected)
+	} else {
+		// Débogage de l'insertion/mise à jour
+		var result sql.Result
+		// Mise à jour d'un noeud existant
+		result, err = db.Exec("UPDATE cluster_members SET auto_sys_update = true WHERE member_id = ?", MachineID)
+
+		log.Println(result)
+
+		if err != nil {
+			log.Printf("Erreur de mise à jour : %v", err)
+			http.Error(w, "Erreur de mise à jour", http.StatusInternalServerError)
+			return
+		}
+
+		// Vérification du résultat
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			log.Printf("Impossible de vérifier les lignes affectées : %v", err)
+		}
+		log.Printf("Lignes affectées : %d", rowsAffected)
+	}
+	// Rediriger vers la liste des utilisateurs
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 // NewTalosVersionManager crée une nouvelle instance du gestionnaire de versions
 func NewTalosVersionManager(githubToken string) (*TalosVersionManager, error) {
-	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: githubToken},
-	)
-	tc := oauth2.NewClient(ctx, ts)
+	if githubToken != "" {
+		ctx := context.Background()
+		ts := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: githubToken},
+		)
+		tc := oauth2.NewClient(ctx, ts)
 
-	manager := &TalosVersionManager{
-		githubClient: github.NewClient(tc),
+		manager := &TalosVersionManager{
+			githubClient: github.NewClient(tc),
+		}
+		if err := manager.initDatabase(); err != nil {
+			return nil, err
+		}
+		return manager, nil
+	} else {
+		manager := &TalosVersionManager{
+			githubClient: github.NewClient(nil),
+		}
+		if err := manager.initDatabase(); err != nil {
+			return nil, err
+		}
+		return manager, nil
 	}
 
-	if err := manager.initDatabase(); err != nil {
-		return nil, err
-	}
-
-	return manager, nil
 }
 
 // Fonction principale qui initialise et démarre le gestionnaire de cluster
 func main() {
 	// Récupérer le token GitHub depuis l'environnement
 	githubToken := os.Getenv("GITHUB_TOKEN")
-	if githubToken == "" {
-		log.Fatal("Un token GitHub est requis. Définissez GITHUB_TOKEN.")
-	}
+	//if githubToken == "" {
+	//	log.Fatal("Un token GitHub est requis. Définissez GITHUB_TOKEN.")
+	//}
+
+	// Créer le répertoire pour la base de données
+	dbDir := filepath.Join(os.Getenv("HOME"), ".talos-manager")
+
+	// Ouvrir ou créer la base de données
+	dbPath := filepath.Join(dbDir, "talos_clusters.db")
+	db, _ := sql.Open("sqlite3", dbPath)
+	http.HandleFunc("/edit", func(w http.ResponseWriter, r *http.Request) {
+		handleNodeEdit(w, r, db)
+	})
+	http.HandleFunc("/update", func(w http.ResponseWriter, r *http.Request) {
+		handleNodeUpdate(w, r, db)
+	})
 
 	// Créer une nouvelle instance du gestionnaire
 	manager, err := NewTalosVersionManager(githubToken)
@@ -706,6 +983,7 @@ func main() {
 	manager.startWebServer()
 
 	// Planifier la synchronisation périodique
+
 	manager.scheduleClusterSync()
 
 	// Attendre un signal d'interruption
