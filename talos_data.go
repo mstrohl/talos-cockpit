@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/siderolabs/talos/pkg/machinery/client"
 	"gopkg.in/yaml.v2"
+	"k8s.io/client-go/util/homedir"
 )
 
 // getClusterID récupère dynamiquement l'identifiant du cluster Talos
@@ -66,12 +70,23 @@ func (m *TalosVersionManager) getConfigVersion() error {
 	return nil
 }
 
+func GetEndpoints() []string {
+	//cl := client.New(context.TODO(), WithConfigFromFile{})
+	cl, _ := client.New(context.TODO(), client.WithDefaultConfig())
+	output := cl.GetEndpoints()
+
+	fmt.Println(output)
+	return output
+}
+
 // getConfigVersion récupère la version actuellement installée
 func (m *TalosVersionManager) getKubeConfig() error {
-	output, err := m.runCommand("talosctl", "kubeconfig", "~/talos-kubeconfig")
-	if err != nil {
-		return err
+	if home := homedir.HomeDir(); home != "" {
+		_, err := m.runCommand("talosctl", "kubeconfig", filepath.Join(home, "talos-kubeconfig"))
+		if err != nil {
+			return err
+		}
 	}
-	m.ConfigVersion = strings.TrimSpace(output)
+
 	return nil
 }

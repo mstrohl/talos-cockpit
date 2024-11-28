@@ -149,6 +149,10 @@ func NewTalosVersionManager(githubToken string) (*TalosVersionManager, error) {
 
 // Fonction principale qui initialise et démarre le gestionnaire de cluster
 func main() {
+
+	//////////////////////////////////
+	// Github
+
 	// Récupérer le token GitHub depuis l'environnement
 	githubToken := os.Getenv("GITHUB_TOKEN")
 	//if githubToken == "" {
@@ -174,19 +178,22 @@ func main() {
 		log.Fatalf("Échec de l'initialisation du gestionnaire : %v", err)
 	}
 
-	//kubeconfig du cluster
-	k8sconf := manager.getKubeConfig()
+	//////////////////////////////////
+	// talos/talosctl Calls
+
+	//Endpoints du cluster
+	endpoint := GetEndpoints()
 	if err != nil {
-		log.Fatalf("Impossible de récupérer le kubeconfig du cluster : %v", err)
+		log.Fatalf("Impossible de les endpoint du cluster : %v", err)
 	}
-	log.Printf("Get Kubeconfig : %s", k8sconf)
+	log.Printf("Get Endpoints : %s", endpoint)
 
 	//kubeconfig du cluster
-	nodes := manager.getNodeByLabel("node-role.kubernetes.io/control-plane=''")
+	k8scfg := manager.getKubeConfig()
 	if err != nil {
 		log.Fatalf("Impossible de récupérer le kubeconfig du cluster : %v", err)
 	}
-	log.Printf("liste des noeuds : %s", nodes)
+	log.Printf("Get Kubeconfig : %s", k8scfg)
 
 	// Récupérer l'ID du cluster
 	clusterID, err := manager.getClusterID()
@@ -223,6 +230,16 @@ func main() {
 	// Planifier la synchronisation périodique
 
 	manager.scheduleClusterSync()
+
+	//////////////////////////////////
+	// K8S API Calls
+
+	//Get Nodes du cluster
+	nodes := manager.getNodeByLabel("node-role.kubernetes.io/control-plane=''")
+	if err != nil {
+		log.Fatalf("Impossible de récupérer le kubeconfig du cluster : %v", err)
+	}
+	log.Printf("liste des noeuds : %s", nodes)
 
 	// Attendre un signal d'interruption
 	sig := make(chan os.Signal, 1)
