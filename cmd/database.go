@@ -132,15 +132,15 @@ func (m *TalosCockpit) listAndStoreClusterMembers(endpoint string) ([]ClusterMem
 		member := ClusterMember{
 			Namespace: memberData.Metadata.Namespace,
 			//Type:            memberData.Metadata.Type,
-			MachineID:       memberData.Metadata.ID,
-			Hostname:        memberData.Spec.Hostname,
-			Role:            memberData.Spec.MachineType,
-			ConfigVersion:   memberData.Metadata.ConfigVersion,
-			LatestOsVersion: strings.TrimLeft(strings.TrimRight(memberData.Spec.OsVersion, ")"), "Talos ("),
-			IP:              strings.Join(memberData.Spec.Addresses, ", "),
-			LastUpdated:     memberData.Metadata.Updated,
-			SysUpdate:       false,
-			K8sUpdate:       false,
+			MachineID:        memberData.Metadata.ID,
+			Hostname:         memberData.Spec.Hostname,
+			Role:             memberData.Spec.MachineType,
+			ConfigVersion:    memberData.Metadata.ConfigVersion,
+			InstalledVersion: strings.TrimLeft(strings.TrimRight(memberData.Spec.OsVersion, ")"), "Talos ("),
+			IP:               strings.Join(memberData.Spec.Addresses, ", "),
+			LastUpdated:      memberData.Metadata.Updated,
+			SysUpdate:        false,
+			K8sUpdate:        false,
 		}
 		members = append(members, member)
 	}
@@ -193,7 +193,7 @@ func (m *TalosCockpit) upsertClusterMembers(clusterID string, members []ClusterM
 		check := m.db.QueryRow("SELECT count(*) as count FROM cluster_members WHERE member_id = ?", member.MachineID)
 		check.Scan(&count)
 		if count == 0 {
-			log.Printf("Adding new member %s with role %s , OS version %s in cluster %s", member.MachineID, member.Role, strings.TrimLeft(strings.TrimRight(member.LatestOsVersion, ")"), "Talos ("), clusterID)
+			log.Printf("Adding new member %s with role %s , OS version %s in cluster %s", member.MachineID, member.Role, strings.TrimLeft(strings.TrimRight(member.InstalledVersion, ")"), "Talos ("), clusterID)
 
 			_, err = stmt.Exec(
 				clusterID,
@@ -203,7 +203,7 @@ func (m *TalosCockpit) upsertClusterMembers(clusterID string, members []ClusterM
 				member.Hostname,
 				member.Role,
 				member.ConfigVersion,
-				strings.TrimLeft(strings.TrimRight(member.LatestOsVersion, ")"), "Talos ("),
+				strings.TrimLeft(strings.TrimRight(member.InstalledVersion, ")"), "Talos ("),
 				member.IP,
 				now,
 				member.LastUpdated,
@@ -227,8 +227,8 @@ func (m *TalosCockpit) updateMemberInfo(clusterID string, members []ClusterMembe
 	}
 	stmt, err := tx.Prepare(`
 		UPDATE cluster_members 
-		SET os_version = \"?\" , last_updated = \"?\" 
-		where cluster_id = \"?\" AND member_id = \"?\"
+		SET os_version = ? , last_updated = ? 
+		where member_id = ?
 	`)
 	if err != nil {
 		return err
@@ -237,17 +237,23 @@ func (m *TalosCockpit) updateMemberInfo(clusterID string, members []ClusterMembe
 
 	//now := time.Now()
 	for _, member := range members {
-		_, err = stmt.Exec(
-			member.LatestOsVersion,
+		var result sql.Result
+		result, err = stmt.Exec(
+			member.InstalledVersion,
 			member.LastUpdated,
 			member.MachineID,
-			clusterID,
 		)
 		if err != nil {
 			tx.Rollback()
 			return err
 		}
-		log.Printf("Syncing node %s OS version %s updated %s", member.MachineID, member.LatestOsVersion, member.LastUpdated)
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			log.Printf("Cannot find updated rows : %v", err)
+		}
+		log.Printf("Syncing node %s OS version %s", member.MachineID, member.InstalledVersion)
+		log.Printf("Rows updated : %d", rowsAffected)
 	}
 
 	return tx.Commit()

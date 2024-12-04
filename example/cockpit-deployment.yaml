@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: talos-cockpit
+spec:
+  selector:
+    matchLabels:
+      app: talos-cockpit
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: talos-cockpit
+    spec:
+      containers:
+      - image: mstrohl/talos-cockpit:0.0.2
+        imagePullPolicy: Always
+        name: talos-cockpit
+        resources: {}
+        volumeMounts:
+        - mountPath: /var/run/secrets/talos.dev
+          name: talos-secrets
+        env:
+          - name: TALOS_API_ENDPOINT
+            value: "10.0.0.15"
+          - name: COCKPIT_SCHED_SYNC
+            value: "1"
+          - name: COCKPIT_SCHED_SYS_UPGRADE
+            value: "2"
+      volumes:
+      - name: talos-secrets
+        secret:
+          secretName: talos-cockpit-talos-secrets
+status: {}
+---
+apiVersion: talos.dev/v1alpha1
+kind: ServiceAccount
+metadata:
+    name: talos-cockpit-talos-secrets
+spec:
+    roles:
+        - os:admin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: talos-cockpit
+  labels:
+    app.kubernetes.io/name: talos-cockpit
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: talos-cockpit
+

@@ -1,0 +1,20 @@
+#Global configurations
+global:
+  debug: false
+
+images:
+  installer: "ghcr.io/siderolabs/installer"
+  
+# schedule configurations
+schedule:
+  sync_members: 1 # in Minutes
+  sys_upgrade: 15
+
+# Talosctl configurations
+talosctl:
+  endpoint: "localhost" 
+
+# Database credentials (unused)
+database:
+  user: "admin"
+  pass: "super-pedro-1982"

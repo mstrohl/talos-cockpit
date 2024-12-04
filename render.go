@@ -10,7 +10,7 @@ import (
 )
 
 // getClusterMembers récupère les membres d'un cluster spécifique depuis la base de données
-func (m *TalosVersionManager) getClusterMembers(clusterID string) ([]ClusterMember, error) {
+func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, error) {
 	rows, err := m.db.Query(`
 		SELECT 
 			cluster_id, 
@@ -63,10 +63,10 @@ func (m *TalosVersionManager) getClusterMembers(clusterID string) ([]ClusterMemb
 }
 
 // startWebServer démarre un serveur web pour visualiser les informations du cluster
-func (m *TalosVersionManager) startWebServer() {
+func (m *TalosCockpit) startWebServer() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Récupérer dynamiquement l'ID du cluster
-		clusterID, err := m.getClusterID()
+		clusterID, err := m.getClusterID(TalosApiEndpoint)
 		if err != nil {
 			http.Error(w, "Impossible de récupérer l'ID du cluster", http.StatusInternalServerError)
 			return
@@ -84,7 +84,7 @@ func (m *TalosVersionManager) startWebServer() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		clientIP, err := m.getNodeIP()
+		clientIP, err := m.getNodeIP(TalosApiEndpoint)
 		if err != nil {
 			log.Printf("Échec de la récupération du NodeIP : %v", err)
 		}

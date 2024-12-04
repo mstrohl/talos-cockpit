@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 
@@ -59,14 +60,43 @@ func (m *TalosCockpit) getNodeIP(endpoint string) (string, error) {
 	return nodeInfo.Spec.Addresses[0], nil
 }
 
-// getConfigVersion récupère la version actuellement installée
-func (m *TalosCockpit) getConfigVersion(endpoint string) error {
+// getTalosVersion récupère la version actuellement installée
+func (m *TalosCockpit) getTalosVersion(endpoint string) error {
 	output, err := m.runCommand("talosctl", "-n", endpoint, "version")
 	if err != nil {
 		return err
 	}
-	m.ConfigVersion = strings.TrimSpace(output)
+	m.InstalledVersion = strings.TrimSpace(output)
 	return nil
+}
+
+// getTalosVersion récupère la version actuellement installée
+func (m *TalosCockpit) getMemberVersion(endpoint string) (string, error) {
+	// talosctl version --short | grep Tag | awk '{print $2}'
+	//talosctl version | sed $'s/\t/  /g' | yq
+	output, err := m.runCommand("talosctl", "-n", endpoint, "version")
+	if err != nil {
+		return "", err
+	}
+	fmt.Printf(output)
+	// Structure pour parser les informations du cluster
+	type VersionData struct {
+		Client struct {
+			Tag string `yaml:"Tag"`
+		} `yaml:"Client"`
+		Server struct {
+			Tag string `yaml:"Tag"`
+		} `yaml:"Server"`
+	}
+
+	var memberVersion VersionData
+	err = yaml.Unmarshal([]byte(output), &memberVersion)
+	if err != nil {
+		log.Printf("erreur de parsing YAML : %v", err)
+		return "", fmt.Errorf("erreur de parsing YAML : %v", err)
+	}
+	fmt.Printf("Tag: %s", memberVersion.Client.Tag)
+	return memberVersion.Server.Tag, nil
 }
 
 //func GetEndpoints() []string {
@@ -78,7 +108,7 @@ func (m *TalosCockpit) getConfigVersion(endpoint string) error {
 //	return output
 //}
 
-// getConfigVersion récupère la version actuellement installée
+// getKubeConfig
 func (m *TalosCockpit) getKubeConfig(endpoint string) error {
 	if home := homedir.HomeDir(); home != "" {
 		_, err := m.runCommand("talosctl", "-n", endpoint, "kubeconfig", filepath.Join(home, ".kube", "talos-kubeconfig"))

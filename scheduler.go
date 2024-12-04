@@ -8,8 +8,28 @@ import (
 )
 
 // scheduleClusterSync gère la synchronisation périodique du cluster
-func (m *TalosVersionManager) scheduleClusterSync() {
-	ticker := time.NewTicker(15 * time.Minute)
+func (m *TalosCockpit) scheduleClusterSync(sched time.Duration, endpoint string) {
+	ticker := time.NewTicker(sched)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				if err := m.getConfigVersion(endpoint); err != nil {
+					log.Printf("Échec de la récupération de la version installée : %v", err)
+				}
+				_, err := m.listAndStoreClusterMembers(endpoint)
+				if err != nil {
+					log.Printf("Échec de la synchronisation des membres du cluster : %v", err)
+				}
+
+			}
+		}
+	}()
+}
+
+// scheduleClusterSync gère la synchronisation périodique du cluster
+func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint string) {
+	ticker := time.NewTicker(sched)
 	go func() {
 		for {
 			select {
@@ -18,16 +38,11 @@ func (m *TalosVersionManager) scheduleClusterSync() {
 					log.Printf("Échec de la récupération de la dernière version : %v", err)
 				}
 
-				if err := m.getConfigVersion(); err != nil {
+				if err := m.getConfigVersion(endpoint); err != nil {
 					log.Printf("Échec de la récupération de la version installée : %v", err)
 				}
-
-				_, err := m.listAndStoreClusterMembers()
-				if err != nil {
-					log.Printf("Échec de la synchronisation des membres du cluster : %v", err)
-				}
 				// Récupérer dynamiquement l'ID du cluster
-				clusterID, err := m.getClusterID()
+				clusterID, err := m.getClusterID(endpoint)
 				if err != nil {
 					log.Printf("Impossible de récupérer l'ID du cluster")
 					return
@@ -41,7 +56,7 @@ func (m *TalosVersionManager) scheduleClusterSync() {
 					if m.LatestOsVersion != m.ConfigVersion {
 
 						if member.SysUpdate {
-							if err := m.upgradeSystem(member.Hostname); err != nil {
+							if err := m.upgradeSystem(member.Hostname, TalosImageInstaller); err != nil {
 								log.Printf("Échec de la mise à jour du système : %v", err)
 							}
 						} else {
@@ -49,7 +64,7 @@ func (m *TalosVersionManager) scheduleClusterSync() {
 						}
 					}
 				}
-				ctl, _ := m.getNodeIP()
+				ctl, _ := m.getNodeIP(endpoint)
 				if m.K8sUpdate {
 					if err := m.upgradeKubernetes(ctl); err != nil {
 						log.Printf("Échec de la mise à jour de Kubernetes : %v", err)
