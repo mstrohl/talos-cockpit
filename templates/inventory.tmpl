@@ -1,0 +1,41 @@
+{{define "title"}}Cluster Inventory{{end}}
+{{define "content"}}
+    <div id="bottom">
+    {{ block "nav" .}} {{end}}
+    <main id="main">
+    <div class="client-info">
+    Node that answers : {{ .ClientIP }}
+    </div>
+    <h2>Cluster Members</h2>
+    <div class="toggle">
+    <h3><b> Auto Update K8S : </b><input type="checkbox" id="auto_k8s_update" name="auto_k8s_update" {{ .K8scheckbox }}></h3>
+    </div>
+    <table>
+    <tr>
+        <th>Namespace</th>
+        <th>ID</th>
+        <th>Hostname</th>
+        <th>Machine Type</th>
+        <th>Config Version</th>
+        <th>OS Version</th>
+        <th>Adresses</th>
+        <th>Auto Sys Update</th>
+        <th>Action</th>
+    </tr>
+    {{ range .MembersHTML }}
+		<tr>
+		<td>{{ .Namespace }}</td>
+		<td>{{ .MachineID }}</td>
+		<td>{{ .Hostname }}</td>
+		<td>{{ .Role }}</td>
+		<td>{{ .ConfigVersion }}</td>
+		<td><b>{{ .InstalledVersion }}</td>
+		<td>{{ .IP }}</td>
+		<td><center>{{ .Syscheckbox }}<a href="/edit?member_id={{ .MachineID }}"><i class="fa fa-gear"></i></a></center></td>
+		<td><a href="/req?member_id={{ .MachineID }}">Update To...</a></td>
+		</tr>
+    {{end}}
+    </table>
+    </main>
+    </div>
+{{end}}

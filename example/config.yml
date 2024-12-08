@@ -18,3 +18,18 @@ talosctl:
 database:
   user: "admin"
   pass: "super-pedro-1982"
+
+# Notifications
+notifications:
+  mail:
+    recipient: "mail@example.com"
+    host: smtp.example.com
+    username: username
+    password: password
+
+templates:
+  layout_path: "../templates/layouts/"
+  include_path: "../templates/"
+
+static:
+  path: "../static"

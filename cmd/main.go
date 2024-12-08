@@ -35,6 +35,7 @@ var (
 	TalosApiEndpoint    string
 	TalosImageInstaller string
 	LastPreRelease      string
+	StaticDir           string
 	kubeconfig          *string
 )
 
@@ -249,24 +250,64 @@ type Configuration struct {
 	IncludePath string
 }
 
-func loadConfiguration(fileName string) {
-	file, _ := os.Open(fileName)
-	decoder := json.NewDecoder(file)
-	configuration := Configuration{}
-	err := decoder.Decode(&configuration)
-	if err != nil {
-		log.Println("error:", err)
-	}
-	log.Println("layout path: ", configuration.LayoutPath)
-	log.Println("include path: ", configuration.IncludePath)
-	templmanager.SetTemplateConfig(configuration.LayoutPath, configuration.IncludePath)
-}
-
 // Fonction principale qui initialise et démarre le gestionnaire de cluster
 func main() {
+
+	//////////////////////////////////
+	// Configs
+
+	var cfg Config
+	readFile(&cfg)
+	readEnv(&cfg)
+	//fmt.Printf("%+v\n", cfg)
+
+	TalosApiEndpoint = cfg.Talosctl.Endpoint
+
+	if cfg.Schedule.SyncMembers != "" {
+		ss, err := strconv.Atoi(cfg.Schedule.SyncMembers)
+		if err != nil {
+			log.Printf("Schedule sync Conversion Error")
+		}
+		SyncSched = time.Duration(ss) * time.Minute
+	} else {
+		SyncSched = (5 * time.Minute)
+	}
+	if cfg.Schedule.SysUpgrade != "" {
+		su, err := strconv.Atoi(cfg.Schedule.SysUpgrade)
+		if err != nil {
+			log.Printf("Schedule Update Conversion Error")
+		}
+		UpgradeSched = time.Duration(su) * time.Minute
+	} else {
+		UpgradeSched = (10 * time.Minute)
+	}
+
+	if cfg.Images.Installer != "" {
+		TalosImageInstaller = cfg.Images.Installer
+	} else {
+		TalosImageInstaller = "ghcr.io/siderolabs/installer"
+	}
+
+	if cfg.Templates.LayoutPath != "" && cfg.Templates.IncludePath != "" {
+		log.Println("layout path: ", cfg.Templates.LayoutPath)
+		log.Println("include path: ", cfg.Templates.IncludePath)
+		templmanager.SetTemplateConfig(cfg.Templates.LayoutPath, cfg.Templates.IncludePath)
+	} else {
+		log.Println("Default layout path: ", "/app/templates/layouts")
+		log.Println("Default include path: ", "/app/templates/")
+		templmanager.SetTemplateConfig("/app/templates/layouts", "/app/templates/")
+	}
+
+	if cfg.Static.Path != "" {
+		log.Println("static path: ", cfg.Static.Path)
+		StaticDir = cfg.Static.Path
+	} else {
+		log.Println("Default static path: /app/static")
+		StaticDir = "/app/static"
+	}
 	//////////////////////////////////
 	// Templating
-	loadConfiguration("../config.json")
+
 	templmanager.LoadTemplates()
 
 	//////////////////////////////////
@@ -291,7 +332,7 @@ func main() {
 		log.Fatalf("Échec de l'initialisation du gestionnaire : %v", err)
 	}
 
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("../static"))))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(StaticDir))))
 
 	http.HandleFunc("/inventory", func(w http.ResponseWriter, r *http.Request) {
 		handleClusterInventory(w, r, db, manager)
@@ -328,41 +369,6 @@ func main() {
 	//	log.Printf(version)
 	//}
 
-	//////////////////////////////////
-	// Configs
-
-	var cfg Config
-	readFile(&cfg)
-	readEnv(&cfg)
-	//fmt.Printf("%+v\n", cfg)
-
-	TalosApiEndpoint = cfg.Talosctl.Endpoint
-
-	if cfg.Schedule.SyncMembers != "" {
-		ss, err := strconv.Atoi(cfg.Schedule.SyncMembers)
-		if err != nil {
-			log.Printf("Schedule sync Conversion Error")
-		}
-		SyncSched = time.Duration(ss) * time.Minute
-	} else {
-		SyncSched = (5 * time.Minute)
-	}
-	if cfg.Schedule.SysUpgrade != "" {
-		su, err := strconv.Atoi(cfg.Schedule.SysUpgrade)
-		if err != nil {
-			log.Printf("Schedule Update Conversion Error")
-		}
-		UpgradeSched = time.Duration(su) * time.Minute
-	} else {
-		UpgradeSched = (10 * time.Minute)
-	}
-
-	if cfg.Images.Installer != "" {
-		TalosImageInstaller = cfg.Images.Installer
-	} else {
-		TalosImageInstaller = "ghcr.io/siderolabs/installer"
-	}
-	//fmt.Printf("Talos Endpoint: %s \n", TalosApiEndpoint)
 	//////////////////////////////////
 	// talos/talosctl Calls
 

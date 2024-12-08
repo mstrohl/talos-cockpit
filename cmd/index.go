@@ -19,59 +19,6 @@ type DashboardData struct {
 	UpgradeSched    time.Duration
 }
 
-// getClusterMembers récupère les membres d'un cluster spécifique depuis la base de données
-//func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, error) {
-//	rows, err := m.db.Query(`
-//		SELECT
-//			cluster_id,
-//			namespace,
-//			member_id,
-//			hostname,
-//			machine_type,
-//			config_version,
-//			os_version,
-//			addresses,
-//			created_at,
-//			last_updated,
-//			auto_sys_update,
-//			auto_k8s_update
-//		FROM cluster_members
-//		WHERE cluster_id = ?
-//	`, clusterID)
-//	if err != nil {
-//		return nil, err
-//	}
-//	defer rows.Close()
-//
-//	var members []ClusterMember
-//	for rows.Next() {
-//		var member ClusterMember
-//		err := rows.Scan(
-//			&member.ClusterID,
-//			&member.Namespace,
-//			//&member.Type,
-//			&member.MachineID,
-//			&member.Hostname,
-//			&member.Role,
-//			&member.ConfigVersion,
-//			&member.InstalledVersion,
-//			&member.IP,
-//			&member.CreatedAt,
-//			&member.LastUpdated,
-//			&member.SysUpdate,
-//			&member.K8sUpdate,
-//		)
-//		member.ClusterID = clusterID
-//
-//		if err != nil {
-//			return nil, err
-//		}
-//		members = append(members, member)
-//	}
-//
-//	return members, nil
-//}
-
 // startWebServer démarre un serveur web pour visualiser les informations du cluster
 func (m *TalosCockpit) startWebServer() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

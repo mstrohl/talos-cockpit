@@ -1,0 +1,26 @@
+{{define "title"}}Manual Node Upgrade{{end}}
+{{define "content"}}
+	<div id="bottom">
+	<!-- (PART B1) SIDEBAR -->
+	<nav id="side" class="mini">
+
+		<!-- (PART B1-2) LINKS -->
+		<div id="slinks">
+		<a href="/">
+			<i>&#9733;</i> <span>Home</span>
+		</a>
+		<a href="/labelform">
+			<i>&#9733;</i> <span>By label</span>
+		</a>
+		</div>
+	</nav>
+
+	<!-- (PART B2) MAIN CONTENT -->
+	<main id="main">
+		<h1>On Demand Upgrade for node {{.MachineID}}</h1>
+		<h2>Upgrade in progress...</h2>
+		<p>Targeted Version <b> {{ .TargetVersion }}</b></p>
+		<h3> Redirecting to / in 30s</h3>
+		<br>
+		<a href="/">Back</a>
+{{end}}

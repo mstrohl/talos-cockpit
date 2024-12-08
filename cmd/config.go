@@ -39,6 +39,13 @@ type Config struct {
 			Password  string `yaml:"password" envconfig:"MAIL_PASSWORD"`
 		} `yaml:"mail"`
 	} `yaml:"notifications"`
+	Templates struct {
+		LayoutPath  string `yaml:"layout_path" envconfig:"TMPL_LAYOUT_PATH"`
+		IncludePath string `yaml:"include_path" envconfig:"TMPL_INCLUDE_PATH"`
+	} `yaml:"templates"`
+	Static struct {
+		Path string `yaml:"path" envconfig:"STATIC_PATH"`
+	} `yaml:"static"`
 }
 
 func processError(err error) {
@@ -47,8 +54,15 @@ func processError(err error) {
 }
 
 func readFile(cfg *Config) {
-	if _, err := os.Stat("/app/config.yml"); err == nil {
-		f, err := os.Open("/app/config.yml")
+	var cfgPath string
+	if os.Getenv("COCKPIT_CONFIG") != "" {
+		cfgPath = os.Getenv("COCKPIT_CONFIG")
+	} else {
+		cfgPath = "/app/config.yml"
+	}
+	log.Printf(cfgPath)
+	if _, err := os.Stat(cfgPath); err == nil {
+		f, err := os.Open(cfgPath)
 		if err != nil {
 			processError(err)
 		}

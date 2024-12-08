@@ -13,3 +13,4 @@ cloudbuild.yaml
 docs
 OWNERS
 vendor
+*.tmp

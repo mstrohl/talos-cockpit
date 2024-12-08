@@ -1,0 +1,27 @@
+
+{{ define "base" }}
+<html>
+<head>
+    <title>{{block "title" .}} {{end}}</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    {{block "meta" .}} {{end}}
+    {{block "style" .}} {{end}}
+</head>
+<body>
+        <nav id="top">
+        <div id="stog" onclick="document.getElementById('side').classList.toggle('mini')">
+            &#9776;
+        </div>
+        <div>
+        <img style="margin: auto; height: 50px" src="/static/images/cockpit-logo.png">
+        </div>
+        <h1>Talos Cockpit</h1>
+        </nav>
+        {{template "content" .}}
+    <footer>{{block "footer" .}} {{end}}</footer>
+    {{block "js" .}} {{end}}
+</body>
+</html>
+
+{{ end }}

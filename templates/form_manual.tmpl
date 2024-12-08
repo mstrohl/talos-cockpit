@@ -1,0 +1,24 @@
+{{define "title"}}Manual Node Upgrade{{end}}
+{{define "content"}}
+	<div id="bottom">
+	{{ block "nav" .}} {{end}}
+	<main id="main">
+		<h1>On Demand Upgrade for node {{.MachineID}} </h1>
+		<form action="/manual" method="post">
+			<label>MachineID :</label> <input type="text" name="member_id" value="{{.MachineID}}" readonly><br><br>
+			
+			<label>InstalledVersion :</label> <input type="text" name="installed_version" value="{{.InstalledVersion}}" readonly><br><br>
+
+			<label>Auto Update System :</label>	<input type="text" name="auto_sys_update" value="{{.SysUpdate}}" readonly><br><br>
+
+			<label><b>Version to install:</b></label>
+			<select name="target_version">
+			{{range $val := .Versions}}
+				<option value="{{$val}}">{{$val}}</option>
+			{{end}}
+			</select><br>
+			<input type="submit" value="Submit">
+		</form>
+		<br>
+		<a href="/">Back</a>
+{{end}}
