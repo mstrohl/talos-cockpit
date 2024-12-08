@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	templmanager "talos-cockpit/internal/tmplmanager"
@@ -36,7 +35,7 @@ type MemberHTML struct {
 
 // getClusterMembers récupère les membres d'un cluster spécifique depuis la base de données
 func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, error) {
-	fmt.Printf("SELECT cluster_id, namespace,  member_id, hostname, machine_type, config_version, os_version, addresses, created_at,last_updated,auto_sys_update,auto_k8s_update FROM cluster_members WHERE cluster_id = %s", clusterID)
+	//fmt.Printf("SELECT cluster_id, namespace,  member_id, hostname, machine_type, config_version, os_version, addresses, created_at,last_updated,auto_sys_update,auto_k8s_update FROM cluster_members WHERE cluster_id = %s", clusterID)
 	rows, err := m.db.Query(`
 		SELECT 
 			cluster_id, 
@@ -54,11 +53,11 @@ func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, err
 		FROM cluster_members 
 		WHERE cluster_id = ?
 	`, clusterID)
-	log.Printf("SELECT cluster_id")
+	//log.Printf("SELECT cluster_id")
 	if err != nil {
 		return nil, err
 	}
-	log.Println(rows)
+	//log.Println(rows)
 	defer rows.Close()
 
 	var members []ClusterMember
@@ -84,7 +83,7 @@ func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, err
 		if err != nil {
 			return nil, err
 		}
-		log.Println(member)
+		//log.Println(member)
 		members = append(members, member)
 	}
 
@@ -93,7 +92,7 @@ func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, err
 
 func handleClusterInventory(w http.ResponseWriter, r *http.Request, db *sql.DB, m *TalosCockpit) {
 
-	log.Printf("INVENTORY - TalosApiEndpoint: %s", TalosApiEndpoint)
+	//log.Printf("INVENTORY - TalosApiEndpoint: %s", TalosApiEndpoint)
 	clusterID, err := m.getClusterID(TalosApiEndpoint)
 	if err != nil {
 		http.Error(w, "Cannot get cluster ID", http.StatusInternalServerError)

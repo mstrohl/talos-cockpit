@@ -14,6 +14,7 @@ type DashboardData struct {
 	ClientIP        string
 	ClusterID       string
 	LatestOsVersion string
+	LastPreRelease  string
 	SyncSched       time.Duration
 	UpgradeSched    time.Duration
 }
@@ -99,6 +100,7 @@ func (m *TalosCockpit) startWebServer() {
 			LatestOsVersion: m.LatestOsVersion,
 			SyncSched:       SyncSched,
 			UpgradeSched:    UpgradeSched,
+			LastPreRelease:  LastPreRelease,
 		}
 
 		templmanager.RenderTemplate(w, "index.tmpl", DashboardData)

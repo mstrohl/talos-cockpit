@@ -34,6 +34,7 @@ var (
 	K8scheckbox         string
 	TalosApiEndpoint    string
 	TalosImageInstaller string
+	LastPreRelease      string
 	kubeconfig          *string
 )
 
@@ -175,6 +176,7 @@ func fetchLastTalosReleases(githubToken string) ([]string, error) {
 	// Combine last prerelease (if found) with first 4 stable releases
 	var result []string
 	if prereleaseVersion != "" {
+		LastPreRelease = prereleaseVersion
 		result = append(result, prereleaseVersion)
 	}
 
