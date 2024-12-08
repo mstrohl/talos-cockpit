@@ -17,6 +17,8 @@ import (
 	"syscall"
 	"time"
 
+	templmanager "talos-cockpit/internal/tmplmanager"
+
 	"encoding/json"
 
 	"github.com/google/go-github/v39/github"
@@ -240,8 +242,30 @@ func NewTalosCockpit(githubToken string) (*TalosCockpit, error) {
 
 }
 
+type Configuration struct {
+	LayoutPath  string
+	IncludePath string
+}
+
+func loadConfiguration(fileName string) {
+	file, _ := os.Open(fileName)
+	decoder := json.NewDecoder(file)
+	configuration := Configuration{}
+	err := decoder.Decode(&configuration)
+	if err != nil {
+		log.Println("error:", err)
+	}
+	log.Println("layout path: ", configuration.LayoutPath)
+	log.Println("include path: ", configuration.IncludePath)
+	templmanager.SetTemplateConfig(configuration.LayoutPath, configuration.IncludePath)
+}
+
 // Fonction principale qui initialise et démarre le gestionnaire de cluster
 func main() {
+	//////////////////////////////////
+	// Templating
+	loadConfiguration("../config.json")
+	templmanager.LoadTemplates()
 
 	//////////////////////////////////
 	// Github
@@ -258,6 +282,19 @@ func main() {
 	// Ouvrir ou créer la base de données
 	dbPath := filepath.Join(dbDir, "talos_clusters.db")
 	db, _ := sql.Open("sqlite3", dbPath)
+
+	// Créer une nouvelle instance du gestionnaire
+	manager, err := NewTalosCockpit(githubToken)
+	if err != nil {
+		log.Fatalf("Échec de l'initialisation du gestionnaire : %v", err)
+	}
+
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("../static"))))
+
+	http.HandleFunc("/inventory", func(w http.ResponseWriter, r *http.Request) {
+		handleClusterInventory(w, r, db, manager)
+	})
+
 	http.HandleFunc("/edit", func(w http.ResponseWriter, r *http.Request) {
 		handleNodeEdit(w, r, db)
 	})
@@ -277,22 +314,17 @@ func main() {
 		performLabeledUpgradeHandler(w, r)
 	})
 
-	// Créer une nouvelle instance du gestionnaire
-	manager, err := NewTalosCockpit(githubToken)
-	if err != nil {
-		log.Fatalf("Échec de l'initialisation du gestionnaire : %v", err)
-	}
-
 	versions, err := fetchLastTalosReleases(githubToken)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	fmt.Println("Last 5 Talos Releases:")
-	for _, version := range versions {
-		fmt.Println(version)
-	}
+	//fmt.Println("Last 5 Talos Releases:")
+	log.Println(versions)
+	//for _, version := range versions {
+	//	log.Printf(version)
+	//}
 
 	//////////////////////////////////
 	// Configs

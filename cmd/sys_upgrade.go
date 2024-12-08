@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"talos-cockpit/pkg/services"
+	"talos-cockpit/internal/services"
 )
 
 // upgradeSystem effectue la mise à jour du système Talos

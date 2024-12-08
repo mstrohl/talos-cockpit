@@ -72,9 +72,8 @@ func (m *TalosCockpit) getTalosVersion(endpoint string) error {
 
 // getTalosVersion récupère la version actuellement installée
 func (m *TalosCockpit) getMemberVersion(endpoint string) (string, error) {
-	// talosctl version --short | grep Tag | awk '{print $2}'
-	//talosctl version | sed $'s/\t/  /g' | yq
-	output, err := m.runCommand("talosctl", "-n", endpoint, "version")
+	cmd := "talosctl version -n " + endpoint + " | sed $'s/\t/  /g' | yq -o json"
+	output, err := m.runCommand("bash", "-c", cmd)
 	if err != nil {
 		return "", err
 	}
@@ -82,15 +81,15 @@ func (m *TalosCockpit) getMemberVersion(endpoint string) (string, error) {
 	// Structure pour parser les informations du cluster
 	type VersionData struct {
 		Client struct {
-			Tag string `yaml:"Tag"`
-		} `yaml:"Client"`
+			Tag string `json:"Tag"`
+		} `json:"Client"`
 		Server struct {
-			Tag string `yaml:"Tag"`
-		} `yaml:"Server"`
+			Tag string `json:"Tag"`
+		} `json:"Server"`
 	}
 
 	var memberVersion VersionData
-	err = yaml.Unmarshal([]byte(output), &memberVersion)
+	err = json.Unmarshal([]byte(output), &memberVersion)
 	if err != nil {
 		log.Printf("erreur de parsing YAML : %v", err)
 		return "", fmt.Errorf("erreur de parsing YAML : %v", err)
