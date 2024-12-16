@@ -114,11 +114,11 @@ func (m *TalosCockpit) listAndStoreClusterMembers(endpoint string) ([]ClusterMem
 	var memberList []MemberData
 	err = json.Unmarshal([]byte(output), &memberList)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse YAML: %v", err)
+		return nil, fmt.Errorf("failed to parse JSON: %v", err)
 	}
 	// Debug
 	// yaml as is
-	//log.Printf("Yaml as is:")
+	//log.Printf("OUTPUT as is:")
 	//println(output)
 
 	var members []ClusterMember

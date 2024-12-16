@@ -47,7 +47,7 @@ func performLabeledUpgradeHandler(w http.ResponseWriter, r *http.Request) {
 	nodeService := services.NewNodeService()
 
 	// List nodes with a specific label
-	nodes, err := nodeService.ListNodesByLabel(Label)
+	nodes, _, err := nodeService.ListNodesByLabel(Label)
 	if err != nil {
 		log.Printf("Failed to list nodes: %v", err)
 	}

@@ -34,6 +34,7 @@ var (
 	K8scheckbox         string
 	TalosApiEndpoint    string
 	TalosImageInstaller string
+	UpgradeK8SOptions   string
 	LastPreRelease      string
 	StaticDir           string
 	kubeconfig          *string
@@ -281,13 +282,27 @@ func main() {
 	} else {
 		UpgradeSched = (10 * time.Minute)
 	}
-
+	////// CFG Images
 	if cfg.Images.Installer != "" {
 		TalosImageInstaller = cfg.Images.Installer
 	} else {
 		TalosImageInstaller = "ghcr.io/siderolabs/installer"
 	}
+	log.Println("Talos image installer: ", TalosImageInstaller)
 
+	if cfg.Images.CustomRegistryPath != "" {
+		r := cfg.Images.CustomRegistryPath
+		UpgradeK8SOptions = "--apiserver-image " + r + "/kube-apiserver --controller-manager-image " + r + "/kube-controller-manager --kubelet-image " + r + "/kubelet --scheduler-image " + r + "/kube-scheduler"
+	}
+	if cfg.Images.KubeProxyEnabled {
+		r := cfg.Images.CustomRegistryPath
+		UpgradeK8SOptions = UpgradeK8SOptions + " --proxy-image " + r + "/kube-proxy"
+	}
+	if !cfg.Images.PrePull {
+		UpgradeK8SOptions = UpgradeK8SOptions + " --pre-pull-images=false"
+	}
+	log.Println("K8S upgrade options: ", UpgradeK8SOptions)
+	////// CFG Templates
 	if cfg.Templates.LayoutPath != "" && cfg.Templates.IncludePath != "" {
 		log.Println("layout path: ", cfg.Templates.LayoutPath)
 		log.Println("include path: ", cfg.Templates.IncludePath)
@@ -297,7 +312,7 @@ func main() {
 		log.Println("Default include path: ", "/app/templates/")
 		templmanager.SetTemplateConfig("/app/templates/layouts", "/app/templates/")
 	}
-
+	////// CFG Static files
 	if cfg.Static.Path != "" {
 		log.Println("static path: ", cfg.Static.Path)
 		StaticDir = cfg.Static.Path
@@ -334,12 +349,19 @@ func main() {
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(StaticDir))))
 
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		handleIndex(w, r, manager)
+	})
+
 	http.HandleFunc("/inventory", func(w http.ResponseWriter, r *http.Request) {
 		handleClusterInventory(w, r, db, manager)
 	})
 
 	http.HandleFunc("/edit", func(w http.ResponseWriter, r *http.Request) {
 		handleNodeEdit(w, r, db)
+	})
+	http.HandleFunc("/dashboard", func(w http.ResponseWriter, r *http.Request) {
+		handleNodeDashboard(w, r, db, manager)
 	})
 	http.HandleFunc("/update", func(w http.ResponseWriter, r *http.Request) {
 		handleNodeUpdate(w, r, db)
@@ -355,6 +377,10 @@ func main() {
 	})
 	http.HandleFunc("/labelupgrade", func(w http.ResponseWriter, r *http.Request) {
 		performLabeledUpgradeHandler(w, r)
+	})
+
+	http.HandleFunc("/api/sysupdate", func(w http.ResponseWriter, r *http.Request) {
+		ApiNodeEdit(w, r, db)
 	})
 
 	versions, err := fetchLastTalosReleases(githubToken)

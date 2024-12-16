@@ -14,7 +14,14 @@ type Config struct {
 		Debug bool `yaml:"debug" envconfig:"COCKPIT_DEBUG"`
 	} `yaml:"global"`
 	Images struct {
-		Installer string `yaml:"installer" envconfig:"TALOS_IMAGE_INSTALLER"`
+		CustomRegistryPath string `yaml:"custom_registry" envconfig:"COCKPIT_CUSTOM_REGISTRY"`
+		Installer          string `yaml:"installer" envconfig:"TALOS_IMAGE_INSTALLER"`
+		//Kubelet: string `yaml:"kubelet" envconfig:"K8S_IMAGE_KUBELET"`
+		//ApiServer: string `yaml:"apiserver" envconfig:"K8S_IMAGE_APISERVER"`
+		//ControllerManager: string `yaml:"controller_manager" envconfig:"K8S_IMAGE_CONTROLLER_MANAGER"`
+		//Scheduler: string `yaml:"scheduler" envconfig:"K8S_IMAGE_SCHEDULER"`
+		KubeProxyEnabled bool `yaml:"kube_proxy_enables" envconfig:"K8S_PROXY_ENABLED"`
+		PrePull          bool `yaml:"prepull" envconfig:"K8S_IMAGE_PREPULL"`
 	} `yaml:"images"`
 	Schedule struct {
 		SyncMembers string `yaml:"sync_members" envconfig:"COCKPIT_SCHED_SYNC"`

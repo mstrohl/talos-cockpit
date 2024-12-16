@@ -40,7 +40,7 @@ func (m *TalosCockpit) updateGroupByLabel(label string, version string) {
 	nodeService := services.NewNodeService()
 
 	// List nodes with a specific label
-	nodes, err := nodeService.ListNodesByLabel(label)
+	nodes, _, err := nodeService.ListNodesByLabel(label)
 	if err != nil {
 		log.Printf("Failed to list nodes: %v", err)
 	}
