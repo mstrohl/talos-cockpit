@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
 	"strings"
 	templmanager "talos-cockpit/internal/tmplmanager"
@@ -28,7 +27,7 @@ func getNodeMC(endpoint string, m *TalosCockpit) (mc string, err error) {
 	if err != nil {
 		return "", err
 	}
-	log.Println("MC Output:", output)
+	//log.Println("MC Output:", output)
 	return output, nil
 }
 

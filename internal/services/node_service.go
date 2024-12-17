@@ -7,6 +7,7 @@ import (
 
 	"talos-cockpit/internal/k8s"
 
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -23,22 +24,26 @@ func NewNodeService() *NodeService {
 	}
 }
 
-func (s *NodeService) ListNodesByLabel(labelSelector string) ([]string, error) {
+func (s *NodeService) ListNodesByLabel(labelSelector string) ([]string, []v1.Node, error) {
 	nodes, err := s.clientset.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error listing nodes: %v", err)
+		return nil, nil, fmt.Errorf("error listing nodes: %v", err)
 	}
 
 	var nodeNames []string
+	//var nodeData []v1.Node
 	for _, node := range nodes.Items {
 		log.Printf("%s\n", node.Name)
 		for _, condition := range node.Status.Conditions {
 			log.Printf("\t%s: %s\n", condition.Type, condition.Status)
+			//if condition.Status != "False" {
+			//	nodeAlerts = append(nodeAlerts, condition.Type)
+			//}
 		}
 		nodeNames = append(nodeNames, node.Name)
 	}
 
-	return nodeNames, err
+	return nodeNames, nodes.Items, err
 }

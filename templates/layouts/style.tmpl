@@ -88,7 +88,7 @@ font-size: 28px; margin-right: 10px;
   width:160px;
   height:180px;
   border-radius:4px;
-  box-shadow: 2px 2px 4px 0 rgba(0,0,0,0.15);
+  box-shadow: 0px 2px 4px 0 rgba(0,0,0,0.15);
   margin-top:20px;
   margin-left:20px;
   float:left;
@@ -169,6 +169,85 @@ font-size: 28px; margin-right: 10px;
 
 .tile.invoice  .body {
   color: #0aa361;
+}
+
+a.fill-div {
+    display: block;
+    height: 100%;
+    width: 100%;
+    text-decoration: none;
+}
+.grid-container {
+  display: grid;
+  grid-template-columns: 165px 165px 165px 165px;
+  grid-gap: 10px;
+  padding: 10px;
+}
+
+.grid-container > div {
+  margin: auto;
+}
+
+[data-tooltip]::before {
+    /* needed - do not touch */
+    content: attr(data-tooltip);
+    position: absolute;
+    opacity: 0;
+
+    /* customizable */
+    transition: all 0.15s ease;
+    padding: 10px;
+    color: #f54714;
+    border-radius: 10px;
+    box-shadow: 2px 2px 1px silver;
+}
+
+[data-tooltip]:hover::before {
+    /* needed - do not touch */
+    opacity: 1;
+
+    /* customizable */
+    background: #37304b;
+    margin-top: -50px;
+    margin-left: 20px;
+}
+
+[data-tooltip]:not([data-tooltip-persistent])::before {
+    pointer-events: none;
+}
+
+textarea {
+    overflow: scroll !important; /* Horizontal and vertical scrollbar*/
+}
+
+code {
+    overflow-y: scroll !important; /* Horizontal and vertical scrollbar*/
+    background: #37304b !important;
+}
+
+.collapsible {
+  background-color: #eee;
+  color: #444;
+  cursor: pointer;
+  padding: 18px;
+  width: 85%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+}
+
+.hjls {
+  background: #37304b;
+}
+
+.hljs-string, .hljs-number {
+  color: #cbbb9c
+}
+
+.hljs-attr {
+  font-weight: bold;
+  color: #f54714
 }
 
 </style>

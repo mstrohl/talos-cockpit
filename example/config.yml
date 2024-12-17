@@ -3,6 +3,7 @@ global:
   debug: false
 
 images:
+  custom_registry: registry.example.com/SubPath
   installer: "ghcr.io/siderolabs/installer"
   
 # schedule configurations

@@ -7,6 +7,7 @@
     Node that answers : {{ .ClientIP }} | Cluster ID: {{ .ClusterID }}
     </div>
     <h1>Talos Cockpit</h1>
+    <div class="grid-container">
     <div class="tile simple">
         <div class="header">
         <div id="lastrelease" class="count">{{ .LatestOsVersion }}</div>
@@ -42,5 +43,21 @@
         <div class="body">
         <div class="title">Auto Upgrade</div>
         </div>
+    </div>
+    </div>
+    <br>
+    <h2> Cluster details <h2>
+    <div class="grid-container">
+      <div class="tile simple">
+        <a href="/inventory" class="fill-div">
+        <div class="header">
+        <div id="nodecount" class="count">{{ .NodeCount }}</div>
+        <div class="title">Nodes</div>
+        </div>
+        <div class="body">
+        <div class="title">Number of nodes</div>
+        </div>
+        </a>
+    </div>
     </div>
 {{end}}

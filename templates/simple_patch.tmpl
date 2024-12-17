@@ -1,0 +1,29 @@
+{{define "title"}}Config Patch{{end}}
+{{define "content"}}
+	<div id="bottom">
+	{{ block "nav" .}} {{end}}
+	<main id="main">
+		<h1>Patching Machine Config</h1>
+		<em><a href="https://www.talos.dev/v1.8/talos-guides/configuration/editing-machine-configuration/#talosctl-patch-machineconfig">https://www.talos.dev/v1.8/talos-guides/configuration/editing-machine-configuration/#talosctl-patch-machineconfig</a></em>
+		<br>
+		<em><a href="https://jsonpatch.com/">https://jsonpatch.com/</a></em>
+		<form action="/drypatch" method="post">
+			<label>Node(s) to patch:</label><br>
+			{{ range . }}
+			<input type="checkbox" name="target_nodes" value="{{ .Hostname }}">  {{ .Hostname }}</input><br>
+			{{end}}
+			<br>
+			<label><b>Operation:</b></label>
+			<select name="operation">
+				<option value="add">Add</option>
+				<option value="replace">Replace</option>
+				<option value="remove">Remove</option>
+			</select><br>
+			<label>Path :</label> <input type="text" name="path"><br>
+			<label><b>Value:</b></label> <input type="text" name="value"><br>
+			
+			<input type="submit" value="Submit">
+		</form>
+		<br>
+		<a href="/inventory">Back</a>
+{{end}}

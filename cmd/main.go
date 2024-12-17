@@ -378,7 +378,15 @@ func main() {
 	http.HandleFunc("/labelupgrade", func(w http.ResponseWriter, r *http.Request) {
 		performLabeledUpgradeHandler(w, r)
 	})
-
+	http.HandleFunc("/spatch", func(w http.ResponseWriter, r *http.Request) {
+		patchHandler(w, r, manager)
+	})
+	http.HandleFunc("/drypatch", func(w http.ResponseWriter, r *http.Request) {
+		performPatchHandler(w, r, "--dry-run")
+	})
+	http.HandleFunc("/patch", func(w http.ResponseWriter, r *http.Request) {
+		performPatchHandler(w, r, "")
+	})
 	http.HandleFunc("/api/sysupdate", func(w http.ResponseWriter, r *http.Request) {
 		ApiNodeEdit(w, r, db)
 	})

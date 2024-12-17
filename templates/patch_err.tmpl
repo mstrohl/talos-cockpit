@@ -1,0 +1,11 @@
+{{define "title"}}Dry-Run Error{{end}}
+{{define "content"}}
+	<div id="bottom">
+	{{ block "nav" .}} {{end}}
+	<!-- (PART B2) MAIN CONTENT -->
+	<main id="main">
+		<h1>Dry-run error: </h1>
+		<p>Command result:<br>
+        <b> {{ . }}</b></p>
+		<a href="/spatch">Back</a>
+{{end}}

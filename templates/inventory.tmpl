@@ -25,11 +25,11 @@
     {{ range .MembersHTML }}
 		<tr>
 		<td>{{ .Namespace }}</td>
-		<td>{{ .MachineID }}</td>
+		<td><center><a href="/dashboard?member_id={{ .Hostname }}">{{ .MachineID }}</a></td>
 		<td>{{ .Hostname }}</td>
 		<td>{{ .Role }}</td>
 		<td>{{ .ConfigVersion }}</td>
-		<td><b>{{ .InstalledVersion }}</td>
+		<td {{if ne $.LatestOsVersion .InstalledVersion }}style="background-color:red" data-tooltip="Last Release : {{ $.LatestOsVersion }}" {{else}}style="background-color:green"{{end}}><b>{{ .InstalledVersion }}</td>
 		<td>{{ .IP }}</td>
 		<td><center>{{ .Syscheckbox }}<a href="/edit?member_id={{ .MachineID }}"><i class="fa fa-gear"></i></a></center></td>
 		<td><a href="/req?member_id={{ .MachineID }}">Update To...</a></td>
