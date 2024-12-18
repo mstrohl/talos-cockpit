@@ -33,10 +33,10 @@ type Config struct {
 	Kubernetes struct {
 		ConfigPath string `yaml:"config" envconfig:"KUBECONFIG"`
 	} `yaml:"kubernetes"`
-	Database struct {
-		Username string `yaml:"user" envconfig:"DB_USERNAME"`
-		Password string `yaml:"pass" envconfig:"DB_PASSWORD"`
-	} `yaml:"database"`
+	//Database struct {
+	//	Username string `yaml:"user" envconfig:"DB_USERNAME"`
+	//	Password string `yaml:"pass" envconfig:"DB_PASSWORD"`
+	//} `yaml:"database"`
 	Notifications struct {
 		Mail struct {
 			Recipient string `yaml:"recipient" envconfig:"MAIL_RECIPIENT"`

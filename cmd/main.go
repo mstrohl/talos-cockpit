@@ -381,6 +381,9 @@ func main() {
 	http.HandleFunc("/spatch", func(w http.ResponseWriter, r *http.Request) {
 		patchHandler(w, r, manager)
 	})
+	http.HandleFunc("/mpatch", func(w http.ResponseWriter, r *http.Request) {
+		multiPatchHandler(w, r, manager)
+	})
 	http.HandleFunc("/drypatch", func(w http.ResponseWriter, r *http.Request) {
 		performPatchHandler(w, r, "--dry-run")
 	})

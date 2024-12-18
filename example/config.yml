@@ -15,10 +15,10 @@ schedule:
 talosctl:
   endpoint: "localhost" 
 
-# Database credentials (unused)
-database:
-  user: "admin"
-  pass: "super-pedro-1982"
+# Database credentials (unused/not implemented)
+#database:
+#  user: "admin"
+#  pass: "super-pedro-1982"
 
 # Notifications
 notifications:

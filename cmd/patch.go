@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	templmanager "talos-cockpit/internal/tmplmanager"
 
@@ -22,9 +24,34 @@ type Patch struct {
 	Value        string
 	Output       string
 	Opt          string
+	MultiPatches string
 }
 
-func patchNode(endpoint string, patch string) {
+func multiPatchHandler(w http.ResponseWriter, r *http.Request, m *TalosCockpit) {
+	//log.Printf("INVENTORY - TalosApiEndpoint: %s", TalosApiEndpoint)
+	clusterID, err := m.getClusterID(TalosApiEndpoint)
+	if err != nil {
+		http.Error(w, "Cannot get cluster ID", http.StatusInternalServerError)
+		return
+	}
+	//log.Printf("INVENTORY - clusterID: %s", clusterID)
+	members, err := m.getClusterMembers(clusterID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var membershtml []simplePatch
+	for _, member := range members {
+		memberhtml := simplePatch{
+			Hostname: member.Hostname,
+		}
+		membershtml = append(membershtml, memberhtml)
+
+	}
+
+	// Template form
+	templmanager.RenderTemplate(w, "multi_patch.tmpl", membershtml)
 
 }
 
@@ -80,23 +107,66 @@ func performPatchHandler(w http.ResponseWriter, r *http.Request, option string) 
 	log.Println("path : ", Path)
 	Value := r.Form.Get("value")
 	log.Println("value : ", Value)
+	MultiPatches := r.Form.Get("multi_patches")
+	log.Println("multi : ", MultiPatches)
 
-	cmd := "talosctl -n " + strings.Join(TargetNodes, ",") + " patch machineconfig -p '[{\"op\": \"" + Operation + "\", \"path\": \"" + Path + "\", \"value\": \"" + Value + "\"}]' " + option
-	log.Println("Patch command : ", cmd)
-	output, err := m.runCommand("bash", "-c", cmd)
-	if err != nil {
-		log.Println("performPatch - ERROR -", err)
-		templmanager.RenderTemplate(w, "patch_err.tmpl", err)
+	var data Patch
+
+	if Operation != "" && Path != "" && Value != "" && MultiPatches == "" {
+
+		cmd := "talosctl -n " + strings.Join(TargetNodes, ",") + " patch machineconfig -p '[{\"op\": \"" + Operation + "\", \"path\": \"" + Path + "\", \"value\": \"" + Value + "\"}]' " + option
+		log.Println("Patch command : ", cmd)
+		output, err := m.runCommand("bash", "-c", cmd)
+		if err != nil {
+			log.Println("performPatch - ERROR -", err)
+			templmanager.RenderTemplate(w, "patch_err.tmpl", err)
+			return
+		}
+
+		data = Patch{
+			TargetFormat: strings.Join(TargetNodes, ","),
+			Operation:    Operation,
+			Path:         Path,
+			Value:        Value,
+			Output:       output,
+			Opt:          option,
+		}
+	} else if Operation == "" && Path == "" && Value == "" && MultiPatches != "" {
+		log.Println("performPatch -INFO - MultiPatches:" + MultiPatches)
+		f, _ := os.Create("multi_patches.yaml")
+		defer f.Close()
+		test, erro := os.Stat("multi_patches.yaml")
+		if erro != nil {
+			log.Println("performPatch - ERROR - CreatingFile - ", erro)
+			templmanager.RenderTemplate(w, "patch_err.tmpl", erro)
+			return
+		}
+		fmt.Println("MultipatchPrint: ", test)
+
+		ln, _ := f.WriteString(MultiPatches)
+		fmt.Printf("MultipatchPrint: %s", ln)
+
+		cmd := "talosctl -n " + strings.Join(TargetNodes, ",") + " patch machineconfig -p @multi_patches.yaml " + option
+		log.Println("Patch command : ", cmd)
+		output, err := m.runCommand("bash", "-c", cmd)
+		if err != nil {
+			log.Println("performPatch - ERROR -", err)
+			templmanager.RenderTemplate(w, "patch_err.tmpl", err)
+			return
+		}
+
+		data = Patch{
+			TargetFormat: strings.Join(TargetNodes, ","),
+			Output:       output,
+			MultiPatches: MultiPatches,
+			Opt:          option,
+		}
+
+	} else {
+		msg := "performPatch - ERROR - Not Simple Patch neither Multi patches - Operation:" + Operation + "|Path:" + Path + "|Value:" + Value + "|MultiPatches:" + MultiPatches
+		log.Println(msg)
+		templmanager.RenderTemplate(w, "patch_err.tmpl", msg)
 		return
-	}
-
-	data := Patch{
-		TargetFormat: strings.Join(TargetNodes, ","),
-		Operation:    Operation,
-		Path:         Path,
-		Value:        Value,
-		Output:       output,
-		Opt:          option,
 	}
 
 	templmanager.RenderTemplate(w, "patch.tmpl", data)
