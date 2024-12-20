@@ -136,14 +136,14 @@ func performPatchHandler(w http.ResponseWriter, r *http.Request, option string) 
 		}
 	} else if Operation == "" && Path == "" && Value == "" && MultiPatches != "" {
 		log.Println("performPatch -INFO - MultiPatches:" + MultiPatches)
-		f, erro := os.Create("multi_patches.yaml")
+		f, erro := os.Create("/app/multi_patches.yaml")
 		if erro != nil {
 			log.Println("performPatch - ERROR - CreatingFile - ", erro)
 			templmanager.RenderTemplate(w, "patch_err.tmpl", erro)
 			return
 		}
 		defer f.Close()
-		test, erro := os.Stat("multi_patches.yaml")
+		test, erro := os.Stat("/app/multi_patches.yaml")
 		if erro != nil {
 			log.Println("performPatch - ERROR - StatFile - ", erro)
 			templmanager.RenderTemplate(w, "patch_err.tmpl", erro)
@@ -154,7 +154,7 @@ func performPatchHandler(w http.ResponseWriter, r *http.Request, option string) 
 		ln, _ := f.WriteString(MultiPatches)
 		fmt.Printf("MultipatchPrint: %s", ln)
 
-		cmd := "talosctl -n " + strings.Join(TargetNodes, ",") + " patch machineconfig -p @multi_patches.yaml " + option
+		cmd := "talosctl -n " + strings.Join(TargetNodes, ",") + " patch machineconfig -p @/app/multi_patches.yaml " + option
 		log.Println("Patch command : ", cmd)
 		output, err := m.runCommand("bash", "-c", cmd)
 		if err != nil {
