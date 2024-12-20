@@ -1,5 +1,10 @@
 # Talos Cockpit
 
+![Static Badge](https://img.shields.io/badge/%20version-v1.22.0-blue?logo=go)
+
+![Talos Cockpit](static/images/talos-cockpit-header.png)
+
+
 # Prerequisites
 
 ## Talos Cluster
