@@ -90,34 +90,6 @@ Define Env vas in you talos-cockpit pod
 | DB_USERNAME | String | NOT USED | |
 | DB_PASSWORD | String | NOT USED | |
 
-	} `yaml:"schedule"`
-	Talosctl struct {
-		Endpoint string `yaml:"endpoint" envconfig:"TALOS_API_ENDPOINT"`
-	} `yaml:"talosctl"`
-	Kubernetes struct {
-		ConfigPath string `yaml:"config" envconfig:"KUBECONFIG"`
-	} `yaml:"kubernetes"`
-	//Database struct {
-	//	Username string `yaml:"user" envconfig:"DB_USERNAME"`
-	//	Password string `yaml:"pass" envconfig:"DB_PASSWORD"`
-	//} `yaml:"database"`
-	Notifications struct {
-		Mail struct {
-			Recipient string `yaml:"recipient" envconfig:"MAIL_RECIPIENT"`
-			Cc        string `yaml:"cc" envconfig:"MAIL_CC"`
-			Host      string `yaml:"host" envconfig:"MAIL_HOST"`
-			User      string `yaml:"username" envconfig:"MAIL_USERNAME"`
-			Password  string `yaml:"password" envconfig:"MAIL_PASSWORD"`
-		} `yaml:"mail"`
-	} `yaml:"notifications"`
-	Templates struct {
-		LayoutPath  string `yaml:"layout_path" envconfig:"TMPL_LAYOUT_PATH"`
-		IncludePath string `yaml:"include_path" envconfig:"TMPL_INCLUDE_PATH"`
-	} `yaml:"templates"`
-	Static struct {
-		Path string `yaml:"path" envconfig:"STATIC_PATH"`
-	} `yaml:"static"`
-
 ***Vars Required***
 
 # Deploy and enjoy
