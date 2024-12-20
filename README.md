@@ -26,22 +26,42 @@ You'll have to mount the file into /app/
 
 > [!NOTE] config.yml
 > ```yaml
-> #Global configurations
-> global:
->   debug: false
+># Global configurations
+>global:
+>  debug: false
 >
-> # schedule configurations
-> schedule:
->   sync_members: 15 # in Minutes
+>images:
+>#  custom_registry: registry.example.com/SubPath
+>  installer: "ghcr.io/siderolabs/installer"
+>  
+># schedule configurations
+>schedule:
+>  sync_members: 1 # in Minutes
+>  sys_upgrade: 15
 >
-> # Talosctl configurations
-> talosctl:
->   endpoint: "localhost" 
-> 
-> # Database credentials (unused)
-> database:
->   user: "admin"
->   pass: "super-pedro-1982"
+># Talosctl configurations
+>talosctl:
+>  endpoint: "localhost" 
+>
+># Database credentials (unused/not implemented)
+>#database:
+>#  user: "admin"
+>#  pass: "super-pedro-1982"
+>
+># Notifications
+>notifications:
+>  mail:
+>    recipient: "mail@example.com"
+>    host: smtp.example.com
+>    username: username
+>    password: password
+>
+>templates:
+>  layout_path: "../templates/layouts/"
+>  include_path: "../templates/"
+>
+>static:
+>  path: "../static"
 > ```
 
 ### Env vars
@@ -54,8 +74,49 @@ Define Env vas in you talos-cockpit pod
 | COCKPIT_SCHED_SYNC | Int | Sync and updates each X Minutes | 5 |
 | COCKPIT_SCHED_SYS_UPGRADE | Int | Sync and updates each X Minutes | 10 |
 | **TALOS_API_ENDPOINT** | String | Endpoint API used by talos-cockpit | |
+| COCKPIT_CUSTOM_REGISTRY | String | Custom registry path (Ex: registry.example.com/SubPath) | |
+| TALOS_IMAGE_INSTALLER | String | Custom Installer image | "ghcr.io/siderolabs/installer" |
+| K8S_PROXY_ENABLED | Boolean | Is kube-proxy used in your cluster? | False |
+| K8S_IMAGE_PREPULL | Boolean | Would you pre pull tolas needed image before update ? | False |
+| KUBECONFIG | String | Kubeconfig PATH | os.ENV("KUBECONFIG") |
+| MAIL_RECIPIENT | String | Mail recipient ||
+| MAIL_CC | String | Mail Copy ||
+| MAIL_HOST | String | SMTP Host ||
+| MAIL_USERNAME | String | SMTP Username ||
+| MAIL_PASSWORD | String | SMTP password ||
+| TMPL_LAYOUT_PATH | String | Templates layout path | /app/templates/layouts |
+| TMPL_INCLUDE_PATH | String | Templates path | /app/templates |
+| STATIC_PATH | String | Static path | /app/static |
 | DB_USERNAME | String | NOT USED | |
 | DB_PASSWORD | String | NOT USED | |
+
+	} `yaml:"schedule"`
+	Talosctl struct {
+		Endpoint string `yaml:"endpoint" envconfig:"TALOS_API_ENDPOINT"`
+	} `yaml:"talosctl"`
+	Kubernetes struct {
+		ConfigPath string `yaml:"config" envconfig:"KUBECONFIG"`
+	} `yaml:"kubernetes"`
+	//Database struct {
+	//	Username string `yaml:"user" envconfig:"DB_USERNAME"`
+	//	Password string `yaml:"pass" envconfig:"DB_PASSWORD"`
+	//} `yaml:"database"`
+	Notifications struct {
+		Mail struct {
+			Recipient string `yaml:"recipient" envconfig:"MAIL_RECIPIENT"`
+			Cc        string `yaml:"cc" envconfig:"MAIL_CC"`
+			Host      string `yaml:"host" envconfig:"MAIL_HOST"`
+			User      string `yaml:"username" envconfig:"MAIL_USERNAME"`
+			Password  string `yaml:"password" envconfig:"MAIL_PASSWORD"`
+		} `yaml:"mail"`
+	} `yaml:"notifications"`
+	Templates struct {
+		LayoutPath  string `yaml:"layout_path" envconfig:"TMPL_LAYOUT_PATH"`
+		IncludePath string `yaml:"include_path" envconfig:"TMPL_INCLUDE_PATH"`
+	} `yaml:"templates"`
+	Static struct {
+		Path string `yaml:"path" envconfig:"STATIC_PATH"`
+	} `yaml:"static"`
 
 ***Vars Required***
 
