@@ -136,11 +136,16 @@ func performPatchHandler(w http.ResponseWriter, r *http.Request, option string) 
 		}
 	} else if Operation == "" && Path == "" && Value == "" && MultiPatches != "" {
 		log.Println("performPatch -INFO - MultiPatches:" + MultiPatches)
-		f, _ := os.Create("multi_patches.yaml")
+		f, erro := os.Create("multi_patches.yaml")
+		if erro != nil {
+			log.Println("performPatch - ERROR - CreatingFile - ", erro)
+			templmanager.RenderTemplate(w, "patch_err.tmpl", erro)
+			return
+		}
 		defer f.Close()
 		test, erro := os.Stat("multi_patches.yaml")
 		if erro != nil {
-			log.Println("performPatch - ERROR - CreatingFile - ", erro)
+			log.Println("performPatch - ERROR - StatFile - ", erro)
 			templmanager.RenderTemplate(w, "patch_err.tmpl", erro)
 			return
 		}
