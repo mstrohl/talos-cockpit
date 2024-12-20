@@ -1,0 +1,16 @@
+# Git Related Items
+.git
+.github
+.gitignore
+
+# CI Related Items
+.travis.yml
+cloudbuild.yaml
+.golangci.yml
+.zappr.yaml
+
+# Other
+docs
+OWNERS
+vendor
+*.tmp

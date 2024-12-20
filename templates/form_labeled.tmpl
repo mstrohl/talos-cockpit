@@ -1,0 +1,20 @@
+{{define "title"}}Upgrade By Label{{end}}
+{{define "content"}}
+	<div id="bottom">
+	{{ block "nav" .}} {{end}}
+	<main id="main">
+		<h1>On Demand Upgrade grouped by Kubernetes Label </h1>
+		<form action="/labelupgrade" method="post">
+			<label>Label :</label> <input type="text" name="target_label"><br><br>
+
+			<label><b>Target Version to install:</b></label>
+			<select name="target_version">
+			{{range $val := .}}
+				<option value="{{$val}}">{{$val}}</option>
+			{{end}}
+			</select><br>
+			<input type="submit" value="Submit">
+		</form>
+		<br>
+		<a href="/">Back</a>
+{{end}}

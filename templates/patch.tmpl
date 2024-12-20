@@ -1,0 +1,46 @@
+{{define "title"}}Dry-Run Patch{{end}}
+{{define "content"}}
+	<div id="bottom">
+	{{ block "nav" .}} {{end}}
+	<!-- (PART B2) MAIN CONTENT -->
+	<main id="main">
+		<h1>{{ if eq .Opt "" }} Applying {{ else if eq .Opt "--dry-run"}} Dry-run {{ else }} Unknown option for {{ end }} patch on nodes: </h1>
+		<h2>Result of the command</h2>
+		<p>{{ if eq .Opt "" }} Apply {{ else if eq .Opt "--dry-run"}} Dry-run {{ else }} Unexpected {{ end }} result:<br>
+        <b> {{ .Output }}</b></p>
+		{{ if eq .Opt "" }}
+		<a class="btn btn-default" href="/spatch">Back</a>
+		{{ else if eq .Opt "--dry-run"}}
+		{{ if eq .MultiPatches "" }}
+		<h3> Apply config patch ?</h3>
+		<br>
+        <button type="button" class="collapsible" data-toggle="collapse" data-target="#patch"><b>Patch Info</b></button>
+        <pre id="patch" class="collapse" style="width:85%">
+        <p><b>Target Nodes :</b> {{ .TargetFormat }}</p>
+        <p><b>Patch Content :</b> '[{"op": "{{ .Operation }}", "path": "{{ .Path }}", "value": "{{ .Value }}"}]'</p>
+        </pre>
+		<form action="/patch" method="post">
+			<input type="hidden" name="target_nodes" value="{{ .TargetFormat }}"></input>
+			<input type="hidden" name="operation" value="{{ .Operation }}"></input>
+			<input type="hidden" name="path" value="{{ .Path }}"></input>
+			<input type="hidden" name="value" value="{{ .Value }}"></input><br>
+			<input type="submit" class="btn btn-primary" value="Apply" onclick="return confirm('Are you sure?')"> <a class="btn btn-default" href="/spatch">Abort</a>
+		</form>
+		{{ else }}
+		<h3> Apply config patch ?</h3>
+		<br>
+        <button type="button" class="collapsible" data-toggle="collapse" data-target="#patch"><b>Patch Info</b></button>
+        <pre id="patch" class="collapse" style="width:85%">
+        <p><b>Target Nodes :</b> {{ .TargetFormat }}</p>
+        <p><b>Patch Content :</b><br>
+{{ .MultiPatches }}
+		</p>
+        </pre>
+		<form action="/patch" method="post">
+			<input type="hidden" name="target_nodes" value="{{ .TargetFormat }}"></input>
+			<input type="hidden" name="multi_patches" value="{{ .MultiPatches }}"></input>	
+			<input type="submit" class="btn btn-primary" value="Apply" onclick="return confirm('Are you sure?')"> <a class="btn btn-default" href="/mpatch">Abort</a>
+		</form>
+		{{end}}
+		{{end}}
+{{end}}

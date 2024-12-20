@@ -1,0 +1,21 @@
+{{define "title"}}Dashboard{{end}}
+{{define "content"}}
+    <div id="bottom">
+    {{ block "nav" .}} {{end}}
+    <main id="main">
+    <h2> {{ .MachineID }} Dashboard</h2>
+    <div class="toggle">
+    </div>
+		<div>
+    <button type="button" class="collapsible" data-toggle="collapse" data-target="#dmesg"><b>Kernel Logs</b></button>
+    <textarea id="dmesg" wrap='off' rows="25" style="width:85%;background-color:#37304b;color:#f54714;scrollbar-base-color:gold;" readonly class="collapse" onclick = "scrollBar('dmesg')">{{ .Dmesg }}</textarea>
+		</div>
+		<br>
+    <div>
+    <button type="button" class="collapsible" data-toggle="collapse" data-target="#mc"><b>Machine Config</b></button>
+    <pre id="mc" class="collapse" style="width:85%"><code id="mc-code" class="yaml" style="max-height: 600px">{{ .MachineConfig }}</code></pre>
+   	</div>
+    
+    </main>
+    </div>		
+{{end}}

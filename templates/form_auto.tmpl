@@ -1,0 +1,23 @@
+{{define "title"}}Node Edit{{end}}
+{{define "content"}}
+<div id="bottom">
+	{{ block "nav" .}} {{end}}
+	<main id="main">
+		<h1>Edit node {{.MachineID}} configuration</h1>
+		<form action="/update" method="post">
+			<label>MachineID :</label><br>
+			<input type="text" name="member_id" value="{{.MachineID}}" readonly><br><br>
+			
+			<label>InstalledVersion :</label><br>
+			<input type="text" name="InstalledVersion" value="{{.InstalledVersion}}" readonly><br><br>
+
+			<label>Auto Update System :</label><br>
+			<select list="auto_sys_update" name="auto_sys_update">
+				<option value=true {{if .SysUpdate}} selected="selected" {{end}}>True</option>
+				<option value=false {{if not .SysUpdate}} selected="selected" {{end}}>False</option>
+			</select>
+			<input type="submit" value="Submit">
+		</form>
+		<br>
+		<a href="/inventory">Back</a>
+{{end}}

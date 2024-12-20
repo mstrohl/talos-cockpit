@@ -1,0 +1,36 @@
+#Global configurations
+global:
+  debug: false
+
+images:
+  custom_registry: registry.example.com/SubPath
+  installer: "ghcr.io/siderolabs/installer"
+  
+# schedule configurations
+schedule:
+  sync_members: 1 # in Minutes
+  sys_upgrade: 15
+
+# Talosctl configurations
+talosctl:
+  endpoint: "localhost" 
+
+# Database credentials (unused/not implemented)
+#database:
+#  user: "admin"
+#  pass: "super-pedro-1982"
+
+# Notifications
+notifications:
+  mail:
+    recipient: "mail@example.com"
+    host: smtp.example.com
+    username: username
+    password: password
+
+templates:
+  layout_path: "../templates/layouts/"
+  include_path: "../templates/"
+
+static:
+  path: "../static"

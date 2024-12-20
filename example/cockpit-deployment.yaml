@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: talos-cockpit
+spec:
+  selector:
+    matchLabels:
+      app: talos-cockpit
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: talos-cockpit
+    spec:
+      containers:
+      - image: mstrohl/talos-cockpit:v0.0.3
+        imagePullPolicy: Always
+        name: talos-cockpit
+        resources: {}
+        volumeMounts:
+        - mountPath: /var/run/secrets/talos.dev
+          name: talos-secrets
+        - mountPath: "/app/config.yml"
+          subPath: "config.yml"
+          name: cockpit-config
+          readOnly: true
+        #env:
+        #  - name: TALOS_API_ENDPOINT
+        #    value: "10.0.0.15"
+        #  - name: COCKPIT_SCHED_SYNC
+        #    value: "1"
+        #  - name: COCKPIT_SCHED_SYS_UPGRADE
+        #    value: "720"
+      volumes:
+      - name: talos-secrets
+        secret:
+          secretName: talos-cockpit-talos-secrets
+      - name: cockpit-config
+        secret:
+          secretName: cockpit-config
+status: {}
+---
+apiVersion: talos.dev/v1alpha1
+kind: ServiceAccount
+metadata:
+    name: talos-cockpit-talos-secrets
+spec:
+    roles:
+        - os:admin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: talos-cockpit
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: talos-cockpit
+subjects:
+  - kind: ServiceAccount
+    # Reference to upper's `metadata.name`
+    name: default
+    # Reference to upper's `metadata.namespace`
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: talos-cockpit
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: talos-cockpit
+  labels:
+    app: talos-cockpit
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: talos-cockpit
+

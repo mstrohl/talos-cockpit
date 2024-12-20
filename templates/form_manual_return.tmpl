@@ -1,0 +1,14 @@
+{{define "meta" }}<meta http-equiv="refresh" content="15;url=/inventory">{{end}}
+{{define "title"}}Manual Node Upgrade{{end}}
+{{define "content"}}
+	<div id="bottom">
+	{{ block "nav" .}} {{end}}
+	<!-- (PART B2) MAIN CONTENT -->
+	<main id="main">
+		<h1>On Demand Upgrade for node {{.MachineID}}</h1>
+		<h2>Upgrade in progress...</h2>
+		<p>Targeted Version <b> {{ .TargetVersion }}</b></p>
+		<h3> Redirecting to Inventory in 30s</h3>
+		<br>
+		<a class="btn btn-default" href="/inventory">Abort</a>
+{{end}}

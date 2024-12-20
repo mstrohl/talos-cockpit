@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,22 +14,22 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// initDatabase initialise la base de données SQLite pour stocker les informations du cluster
-func (m *TalosVersionManager) initDatabase() error {
+// initDatabase SQLite database init
+func (m *TalosCockpit) initDatabase() error {
 	// Créer le répertoire pour la base de données
-	dbDir := filepath.Join(os.Getenv("HOME"), ".talos-manager")
+	dbDir := filepath.Join(os.Getenv("HOME"), ".talos-cockpit")
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
 		return err
 	}
 
-	// Ouvrir ou créer la base de données
+	// Open or create databse
 	dbPath := filepath.Join(dbDir, "talos_clusters.db")
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return err
 	}
 
-	// Créer les tables nécessaires
+	// Create tables
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS clusters (
 			name TEXT UNIQUE PRIMARY KEY,
@@ -61,8 +62,8 @@ func (m *TalosVersionManager) initDatabase() error {
 	return nil
 }
 
-// upsertCluster insère ou met à jour les informations d'un cluster
-func (m *TalosVersionManager) upsertCluster(clusterID, endpoint string) (int, error) {
+// upsertCluster insert or replace cluster information
+func (m *TalosCockpit) upsertCluster(clusterID, endpoint string) (int, error) {
 	result, err := m.db.Exec(`
 		INSERT OR REPLACE INTO clusters (name, endpoint) 
 		VALUES (?, ?)
@@ -75,23 +76,24 @@ func (m *TalosVersionManager) upsertCluster(clusterID, endpoint string) (int, er
 	return int(id), err
 }
 
-// listAndStoreClusterMembers récupère et stocke les informations des membres du cluster
-func (m *TalosVersionManager) listAndStoreClusterMembers() ([]ClusterMember, error) {
-	// Récupérer l'ID du cluster
-	clusterID, err := m.getClusterID()
+// listAndStoreClusterMembers
+func (m *TalosCockpit) listAndStoreClusterMembers(endpoint string) ([]ClusterMember, error) {
+	// Get Cluster ID
+	clusterID, err := m.getClusterID(endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("impossible de récupérer l'ID du cluster : %v", err)
+		return nil, fmt.Errorf("Cannot get Cluster ID : %v", err)
 	}
 
 	// Récupérer les membres du cluster
 	//output, err := m.runCommand("talosctl", "get", "members", "-o", "json", "\|", "jq", "-s", ".")
-	cmd := "talosctl get members -o json | jq -s ."
+	cmd := "talosctl -n " + endpoint + " get members -o json | jq -s ."
+	//log.Printf("Command: %s", cmd)
 	output, err := m.runCommand("bash", "-c", cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	// Structures pour parser les données YAML
+	// Structures pour parser les données JSON
 	type MemberData struct {
 		Metadata struct {
 			Namespace     string      `json:"namespace"`
@@ -112,54 +114,55 @@ func (m *TalosVersionManager) listAndStoreClusterMembers() ([]ClusterMember, err
 	var memberList []MemberData
 	err = json.Unmarshal([]byte(output), &memberList)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse YAML: %v", err)
+		return nil, fmt.Errorf("failed to parse JSON: %v", err)
 	}
 	// Debug
-	// sortie yaml brute
-	//log.Printf("Sortie Brute:")
+	// yaml as is
+	//log.Printf("OUTPUT as is:")
 	//println(output)
 
 	var members []ClusterMember
-
-	// Stocker le premier client comme client global
-	//if len(memberList) > 0 {
-	//	m.clientInfo = memberList.Spec
-	//}
 
 	// DEBUG
 	//log.Printf("Member List:")
 	//fmt.Printf("%+v\n", memberList)
 
-	// Transformer les données membres
+	// Transform members data
 	for _, memberData := range memberList {
 		member := ClusterMember{
 			Namespace: memberData.Metadata.Namespace,
 			//Type:            memberData.Metadata.Type,
-			MachineID:       memberData.Metadata.ID,
-			Hostname:        memberData.Spec.Hostname,
-			Role:            memberData.Spec.MachineType,
-			ConfigVersion:   memberData.Metadata.ConfigVersion,
-			LatestOsVersion: strings.TrimLeft(strings.TrimRight(memberData.Spec.OsVersion, ")"), "Talos ("),
-			IP:              strings.Join(memberData.Spec.Addresses, ", "),
-			LastUpdated:     memberData.Metadata.Updated,
-			SysUpdate:       false,
-			K8sUpdate:       false,
+			MachineID:        memberData.Metadata.ID,
+			Hostname:         memberData.Spec.Hostname,
+			Role:             memberData.Spec.MachineType,
+			ConfigVersion:    memberData.Metadata.ConfigVersion,
+			InstalledVersion: strings.TrimLeft(strings.TrimRight(memberData.Spec.OsVersion, ")"), "Talos ("),
+			IP:               strings.Join(memberData.Spec.Addresses, ", "),
+			LastUpdated:      memberData.Metadata.Updated,
+			SysUpdate:        false,
+			K8sUpdate:        false,
 		}
 		members = append(members, member)
 	}
-	//log.Printf("Liste:")
+	//log.Printf("Member List:")
 	//for _, memberData := range memberList {
 	//	println(memberData.Metadata.ID)
 	//}
 
-	// Insérer ou mettre à jour le cluster
+	// Insert Cluster into database
 	_, err = m.upsertCluster(clusterID, "https://kubernetes.default.svc.cluster.local")
 	if err != nil {
 		return nil, err
 	}
 
-	// Stocker les membres du cluster
+	// Insert members into database
 	err = m.upsertClusterMembers(clusterID, members)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update members
+	err = m.updateMemberInfo(clusterID, members)
 	if err != nil {
 		return nil, err
 	}
@@ -167,8 +170,8 @@ func (m *TalosVersionManager) listAndStoreClusterMembers() ([]ClusterMember, err
 	return members, nil
 }
 
-// upsertClusterMembers insère ou met à jour les informations des membres du cluster
-func (m *TalosVersionManager) upsertClusterMembers(clusterID string, members []ClusterMember) error {
+// upsertClusterMembers insert cluster members
+func (m *TalosCockpit) upsertClusterMembers(clusterID string, members []ClusterMember) error {
 	tx, err := m.db.Begin()
 	if err != nil {
 		return err
@@ -186,40 +189,47 @@ func (m *TalosVersionManager) upsertClusterMembers(clusterID string, members []C
 
 	now := time.Now()
 	for _, member := range members {
-		_, err = stmt.Exec(
-			clusterID,
-			member.Namespace,
-			//member.Type,
-			member.MachineID,
-			member.Hostname,
-			member.Role,
-			member.ConfigVersion,
-			strings.TrimLeft(strings.TrimRight(member.LatestOsVersion, ")"), "Talos ("),
-			member.IP,
-			now,
-			member.LastUpdated,
-			false,
-			false,
-		)
-		if err != nil {
-			tx.Rollback()
-			return err
+		var count int32
+		check := m.db.QueryRow("SELECT count(*) as count FROM cluster_members WHERE member_id = ?", member.MachineID)
+		check.Scan(&count)
+		if count == 0 {
+			log.Printf("Adding new member %s with role %s , OS version %s in cluster %s", member.MachineID, member.Role, strings.TrimLeft(strings.TrimRight(member.InstalledVersion, ")"), "Talos ("), clusterID)
+
+			_, err = stmt.Exec(
+				clusterID,
+				member.Namespace,
+				//member.Type,
+				member.MachineID,
+				member.Hostname,
+				member.Role,
+				member.ConfigVersion,
+				strings.TrimLeft(strings.TrimRight(member.InstalledVersion, ")"), "Talos ("),
+				member.IP,
+				now,
+				member.LastUpdated,
+				false,
+				false,
+			)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
 		}
 	}
 
 	return tx.Commit()
 }
 
-func (m *TalosVersionManager) updateMemberInfo(version string, clusterID string, members []ClusterMember) error {
+// Update members information
+func (m *TalosCockpit) updateMemberInfo(clusterID string, members []ClusterMember) error {
 	tx, err := m.db.Begin()
 	if err != nil {
 		return err
 	}
-
 	stmt, err := tx.Prepare(`
 		UPDATE cluster_members 
-		set os_version = ? , last_updated = ? 
-		where cluster_id = ? AND member_id = ?
+		SET os_version = ? , last_updated = ? 
+		where member_id = ?
 	`)
 	if err != nil {
 		return err
@@ -228,16 +238,23 @@ func (m *TalosVersionManager) updateMemberInfo(version string, clusterID string,
 
 	//now := time.Now()
 	for _, member := range members {
-		_, err = stmt.Exec(
-			version,
+		var result sql.Result
+		result, err = stmt.Exec(
+			member.InstalledVersion,
 			member.LastUpdated,
 			member.MachineID,
-			clusterID,
 		)
 		if err != nil {
 			tx.Rollback()
 			return err
 		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			log.Printf("Cannot find updated rows : %v", err)
+		}
+		log.Printf("Syncing node %s OS version %s", member.MachineID, member.InstalledVersion)
+		log.Printf("Rows updated : %d", rowsAffected)
 	}
 
 	return tx.Commit()
