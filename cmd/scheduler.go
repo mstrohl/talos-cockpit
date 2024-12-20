@@ -7,7 +7,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// scheduleClusterSync gère la synchronisation périodique du cluster
+// scheduleClusterSync manage member list schedules
 func (m *TalosCockpit) scheduleClusterSync(sched time.Duration, endpoint string) {
 	ticker := time.NewTicker(sched)
 	go func() {
@@ -27,7 +27,7 @@ func (m *TalosCockpit) scheduleClusterSync(sched time.Duration, endpoint string)
 	}()
 }
 
-// scheduleClusterSync gère la synchronisation périodique du cluster
+// scheduleClusterSync manage cluster upgrade schedules
 func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint string) {
 	ticker := time.NewTicker(sched)
 	go func() {

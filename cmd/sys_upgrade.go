@@ -6,7 +6,7 @@ import (
 	"talos-cockpit/internal/services"
 )
 
-// upgradeSystem effectue la mise à jour du système Talos
+// upgradeSystem upgrade talos system of a node
 func (m *TalosCockpit) upgradeSystem(node string, installerImage string) error {
 	log.Printf("Launch System upgrade to %s for node %s", m.LatestOsVersion, node)
 	log.Printf("talosctl upgrade -n %s --image %s:%s --preserve=true", node, installerImage, m.LatestOsVersion)
@@ -20,7 +20,8 @@ func (m *TalosCockpit) upgradeSystem(node string, installerImage string) error {
 	return err
 }
 
-// customUpgradeSystem effectue la mise à jour du système Talos
+// TODO: merge with upgradeSystem()
+// customUpgradeSystem upgrade with a custom version
 func (m *TalosCockpit) customUpgradeSystem(node string, installerImage string, version string) error {
 	log.Printf("Launch Sytem upgrade to %s for node %s", version, node)
 	log.Printf("talosctl upgrade -n %s --image %s:%s --preserve=true", node, installerImage, version)
@@ -35,6 +36,7 @@ func (m *TalosCockpit) customUpgradeSystem(node string, installerImage string, v
 	return err
 }
 
+// updateGroupByLabel upgrade all node matching the parameter label
 func (m *TalosCockpit) updateGroupByLabel(label string, version string) {
 	// Create node service
 	nodeService := services.NewNodeService()

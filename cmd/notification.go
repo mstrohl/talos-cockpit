@@ -19,6 +19,7 @@ type NodeUpdateReport struct {
 	Timestamp         string
 }
 
+// SendMail for Alerting purpose
 func sendMail(subject string, body string) {
 
 	var cfg Config
@@ -56,6 +57,7 @@ func sendMail(subject string, body string) {
 	}
 }
 
+// Identifying status to change color if needed
 func determineStatusClass(status string) string {
 	switch status {
 	case "Success":
@@ -69,6 +71,7 @@ func determineStatusClass(status string) string {
 	}
 }
 
+// Gen email body HTML
 func generateUpdateEmailBody(report NodeUpdateReport) (string, error) {
 	// HTML template as a string
 	htmlTemplate := `<!DOCTYPE html>

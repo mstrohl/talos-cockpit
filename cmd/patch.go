@@ -27,6 +27,7 @@ type Patch struct {
 	MultiPatches string
 }
 
+// Render multi patch template
 func multiPatchHandler(w http.ResponseWriter, r *http.Request, m *TalosCockpit) {
 	//log.Printf("INVENTORY - TalosApiEndpoint: %s", TalosApiEndpoint)
 	clusterID, err := m.getClusterID(TalosApiEndpoint)
@@ -55,6 +56,7 @@ func multiPatchHandler(w http.ResponseWriter, r *http.Request, m *TalosCockpit) 
 
 }
 
+// Render single patch template
 func patchHandler(w http.ResponseWriter, r *http.Request, m *TalosCockpit) {
 	//log.Printf("INVENTORY - TalosApiEndpoint: %s", TalosApiEndpoint)
 	clusterID, err := m.getClusterID(TalosApiEndpoint)
@@ -83,6 +85,7 @@ func patchHandler(w http.ResponseWriter, r *http.Request, m *TalosCockpit) {
 
 }
 
+// Apply multiple or single patch Get form data, dry-run patches and apply if confirmed
 func performPatchHandler(w http.ResponseWriter, r *http.Request, option string) {
 	var m *TalosCockpit
 	// Check method is a POST
@@ -170,9 +173,4 @@ func performPatchHandler(w http.ResponseWriter, r *http.Request, option string) 
 	}
 
 	templmanager.RenderTemplate(w, "patch.tmpl", data)
-	// Upgrade group
-
-	//}
-	// Rediriger vers la liste des utilisateurs
-	//http.Redirect(w, r, "/", http.StatusSeeOther)
 }

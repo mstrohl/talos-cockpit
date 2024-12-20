@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-// getClusterID récupère dynamiquement l'identifiant du cluster Talos
+// getClusterID Get id of the talos cluster
 func (m *TalosCockpit) getClusterID(endpoint string) (string, error) {
 	// Exécution de la commande talosctl pour obtenir les informations du cluster
 	output, err := m.runCommand("talosctl", "-n", endpoint, "get", "info", "-o", "json")
@@ -36,15 +36,14 @@ func (m *TalosCockpit) getClusterID(endpoint string) (string, error) {
 	return clusterInfo.Spec.ClusterID, nil
 }
 
-// getNodeIP récupère dynamiquement l'IP
+// getNodeIP get talos node IP
 func (m *TalosCockpit) getNodeIP(endpoint string) (string, error) {
-	// Exécution de la commande talosctl pour obtenir les informations du cluster
+
 	output, err := m.runCommand("talosctl", "-n", endpoint, "get", "nodeip", "-o", "yaml")
 	if err != nil {
 		return "", err
 	}
 
-	// Structure pour parser les informations du cluster
 	type NodeInfoData struct {
 		Spec struct {
 			Addresses []string `yaml:"addresses"`
@@ -60,7 +59,8 @@ func (m *TalosCockpit) getNodeIP(endpoint string) (string, error) {
 	return nodeInfo.Spec.Addresses[0], nil
 }
 
-// getTalosVersion récupère la version actuellement installée
+// TODO: Check if needed
+// getTalosVersion get installed version of talos
 func (m *TalosCockpit) getTalosVersion(endpoint string) error {
 	output, err := m.runCommand("talosctl", "-n", endpoint, "version")
 	if err != nil {
@@ -70,7 +70,7 @@ func (m *TalosCockpit) getTalosVersion(endpoint string) error {
 	return nil
 }
 
-// getTalosVersion récupère la version actuellement installée
+// getTalosVersion get installed version of talos
 func (m *TalosCockpit) getMemberVersion(endpoint string) (string, error) {
 	cmd := "talosctl version -n " + endpoint + " | sed $'s/\t/  /g' | yq -o json"
 	output, err := m.runCommand("bash", "-c", cmd)
@@ -107,6 +107,7 @@ func (m *TalosCockpit) getMemberVersion(endpoint string) (string, error) {
 //	return output
 //}
 
+// TODO: Check if needed
 // getKubeConfig
 func (m *TalosCockpit) getKubeConfig(endpoint string) error {
 	if home := homedir.HomeDir(); home != "" {

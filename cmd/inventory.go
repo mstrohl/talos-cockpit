@@ -33,7 +33,7 @@ type MemberHTML struct {
 	Syscheckbox      string
 }
 
-// getClusterMembers récupère les membres d'un cluster spécifique depuis la base de données
+// getClusterMembers get members of a cluster from database
 func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, error) {
 	//fmt.Printf("SELECT cluster_id, namespace,  member_id, hostname, machine_type, config_version, os_version, addresses, created_at,last_updated,auto_sys_update,auto_k8s_update FROM cluster_members WHERE cluster_id = %s", clusterID)
 	rows, err := m.db.Query(`
@@ -90,6 +90,7 @@ func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, err
 	return members, nil
 }
 
+// Render inventory tempalte
 func handleClusterInventory(w http.ResponseWriter, r *http.Request, db *sql.DB, m *TalosCockpit) {
 
 	//log.Printf("INVENTORY - TalosApiEndpoint: %s", TalosApiEndpoint)

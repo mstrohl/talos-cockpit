@@ -8,7 +8,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// startWebServer démarre un serveur web pour visualiser les informations du cluster
+// startWebServer Start webserver
 func (m *TalosCockpit) startWebServer() {
 
 	m.webServer = &http.Server{

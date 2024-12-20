@@ -23,21 +23,15 @@ type DashboardData struct {
 	NodeData        []v1.Node
 }
 
+// Render index/dashboard template
 func handleIndex(w http.ResponseWriter, r *http.Request, m *TalosCockpit) {
-	//http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	// Récupérer dynamiquement l'ID du cluster
+	// Get ClusterID
 	clusterID, err := m.getClusterID(TalosApiEndpoint)
 	if err != nil {
 		http.Error(w, "Impossible de récupérer l'ID du cluster", http.StatusInternalServerError)
 		return
 	}
 
-	//// Convertir l'ID en entier pour la base de données
-	//_, err = m.upsertCluster(clusterID, "https://kubernetes.default.svc.cluster.local")
-	//if err != nil {
-	//	http.Error(w, "Erreur lors de l'insertion du cluster", http.StatusInternalServerError)
-	//	return
-	//}
 	nodeService := services.NewNodeService()
 
 	// List nodes with a specific label
@@ -69,5 +63,3 @@ func handleIndex(w http.ResponseWriter, r *http.Request, m *TalosCockpit) {
 
 	templmanager.RenderTemplate(w, "index.tmpl", DashboardData)
 }
-
-//)

@@ -4,7 +4,7 @@ import (
 	"log"
 )
 
-//
+// TODO Add OIDC capability
 // Uncomment to load all auth plugins
 // _ "k8s.io/client-go/plugin/pkg/client/auth"
 //
@@ -13,7 +13,7 @@ import (
 
 // NewKubernetesClient creates a new Kubernetes client
 
-// upgradeKubernetes effectue la mise à jour de Kubernetes
+// upgradeKubernetes apply kubernetes upgrade
 func (m *TalosCockpit) upgradeKubernetes(controller string) error {
 	// TODO MANAGE VERSION INSTEAD OF LATEST
 	//  + " --to " + k8sversion

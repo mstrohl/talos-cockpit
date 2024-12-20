@@ -16,6 +16,7 @@ type NodeService struct {
 	clientset *kubernetes.Clientset
 }
 
+// NewNodeService Create new k8s client for node data management
 func NewNodeService() *NodeService {
 	// Use the centralized client manager
 	clientManager := k8s.NewK8sClientManager()
@@ -24,6 +25,7 @@ func NewNodeService() *NodeService {
 	}
 }
 
+// ListNodesByLabel get a list of node matching label
 func (s *NodeService) ListNodesByLabel(labelSelector string) ([]string, []v1.Node, error) {
 	nodes, err := s.clientset.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{
 		LabelSelector: labelSelector,

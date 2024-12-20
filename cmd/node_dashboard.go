@@ -13,6 +13,7 @@ type NodeReport struct {
 	MachineConfig string
 }
 
+// Get dmesg of a node
 func getNodeDmesg(endpoint string, m *TalosCockpit) (dmesg string, err error) {
 	output, err := m.runCommand("talosctl", "-n", endpoint, "dmesg")
 	if err != nil {
@@ -21,6 +22,7 @@ func getNodeDmesg(endpoint string, m *TalosCockpit) (dmesg string, err error) {
 	return output, nil
 }
 
+// Get machine config of a node
 func getNodeMC(endpoint string, m *TalosCockpit) (mc string, err error) {
 	cmd := "talosctl -n " + endpoint + " get mc -ojson | jq -r .spec"
 	output, err := m.runCommand("bash", "-c", cmd)
@@ -31,6 +33,7 @@ func getNodeMC(endpoint string, m *TalosCockpit) (mc string, err error) {
 	return output, nil
 }
 
+// Render Node dashboard template
 func handleNodeDashboard(w http.ResponseWriter, r *http.Request, db *sql.DB, m *TalosCockpit) {
 	endpoint := r.URL.Query().Get("member_id")
 	//log.Printf("Dashboard")

@@ -32,7 +32,7 @@ func performLabeledUpgradeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Récupérer les données du formulaire
+	// Parse form data
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, "Parsing error on form", http.StatusBadRequest)
@@ -63,7 +63,4 @@ func performLabeledUpgradeHandler(w http.ResponseWriter, r *http.Request) {
 	m.updateGroupByLabel(Label, TargetVersion)
 
 	log.Printf("Upgrade nodes grouped by label %s to version %s", Label, TargetVersion)
-	//}
-	// Rediriger vers la liste des utilisateurs
-	//http.Redirect(w, r, "/", http.StatusSeeOther)
 }

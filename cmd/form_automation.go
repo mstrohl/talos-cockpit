@@ -12,6 +12,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// Get member information needed to edit system upgrade configuration of a node
 func NodeEdit(member_id string, db *sql.DB) ClusterMember {
 	// Get memberID
 	idStr := member_id
@@ -41,6 +42,7 @@ func NodeEdit(member_id string, db *sql.DB) ClusterMember {
 
 }
 
+// Render node edition template
 func handleNodeEdit(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if r.Method == "GET" {
 		// Get memberID
@@ -53,6 +55,7 @@ func handleNodeEdit(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 }
 
+// NodeUpdate Update Node information
 func NodeUpdate(member_id string, cluster_id string, action string, db *sql.DB) {
 	// Get form values
 	memberId := member_id
@@ -66,7 +69,7 @@ func NodeUpdate(member_id string, cluster_id string, action string, db *sql.DB) 
 	var err error
 
 	if memberId != "" {
-		// Mise à jour d'un noeud existant
+		// Update existing node
 		log.Printf("UPDATE cluster_members SET auto_sys_update = %v WHERE member_id = %s", status, memberId)
 		result, err = db.Exec("UPDATE cluster_members SET auto_sys_update = ? WHERE member_id = ?", status, memberId)
 		if err != nil {
@@ -82,7 +85,7 @@ func NodeUpdate(member_id string, cluster_id string, action string, db *sql.DB) 
 		}
 	}
 
-	// Vérification du résultat
+	// Check results
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		log.Printf("Impossible de vérifier les lignes affectées : %v", err)
@@ -93,11 +96,9 @@ func NodeUpdate(member_id string, cluster_id string, action string, db *sql.DB) 
 		log.Printf("Updating nodes from cluster %s set system automatic update to %s", clusterId, status)
 	}
 	log.Printf("Rows updated : %d", rowsAffected)
-	//}
-	// Rediriger vers la liste des utilisateurs
-	//http.Redirect(w, r, "/inventory", http.StatusSeeOther)
 }
 
+// Apply update on database and redirect to inventory
 func handleNodeUpdate(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	// Check method is a POST
 	if r.Method != "POST" {
@@ -105,7 +106,7 @@ func handleNodeUpdate(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
-	// Récupérer les données du formulaire
+	// Parse form data
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, "Parsing error on form", http.StatusBadRequest)
@@ -118,7 +119,7 @@ func handleNodeUpdate(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	SysUpdate, _ := strconv.ParseBool(r.Form.Get("auto_sys_update"))
 	//log.Printf("auto_sys_updates : %v", SysUpdate)
 	var result sql.Result
-	// Mise à jour d'un noeud existant
+	// Update existing node
 	result, err = db.Exec("UPDATE cluster_members SET auto_sys_update = ? WHERE member_id = ?", SysUpdate, MachineID)
 	if err != nil {
 		log.Printf("Erreur de mise à jour : %v", err)
@@ -126,7 +127,7 @@ func handleNodeUpdate(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
-	// Vérification du résultat
+	// Check results
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		log.Printf("Impossible de vérifier les lignes affectées : %v", err)
@@ -138,12 +139,26 @@ func handleNodeUpdate(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	http.Redirect(w, r, "/inventory", http.StatusSeeOther)
 }
 
+// ApiNodeEdit godoc
+//	@Summary		Manage nodes auto upgrade
+//	@Description	Manage nodes auto upgrade
+//	@Tags			SysUpdate
+//	@ID				nodeEdit
+//	@Accept			x-www-form-urlencoded
+//	@Produce		plain
+//	@Param			member_id	query		string	false	"used to enable/disable automated system upgrade on a node"
+//	@Param			cluster_id	query		string	false	"used to enable/disable automated system upgrade on all nodes in the cluster"
+//	@Param			enable		query		string	true	"used to define action enabling or disabling"
+//	@Success		200			{integer}	string	"answer"
+//	@Router			/api/sysupdate [post]
+// ApiNodeEdit Provide capability to manage nodes auto upgrade through API calls
 func ApiNodeEdit(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var idStr string
 	var idCluster string
 	var action string
 
 	// Check method is a POST
+	// TODO add a GET to get current config
 	if r.Method != "POST" {
 		http.Error(w, "HTTP-405 Method Not Allowed - Only Method POST is available", 405)
 		log.Printf("ApiNodeEdit - Method Not Allowed")

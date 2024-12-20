@@ -21,6 +21,8 @@ import (
 
 	"encoding/json"
 
+	//httpSwagger "github.com/swaggo/http-swagger"
+
 	"github.com/google/go-github/v39/github"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/oauth2"
@@ -40,14 +42,14 @@ var (
 	kubeconfig          *string
 )
 
-// Cluster représente les informations de base sur un cluster Kubernetes
+// Cluster contain kubernetes cluster information
 type Cluster struct {
 	ID       int
 	Name     string
 	Endpoint string
 }
 
-// ClusterMember contient les détails d'un membre du cluster Talos
+// ClusterMember containing details of a Talos Member
 type ClusterMember struct {
 	ClusterID        string
 	Namespace        string
@@ -65,7 +67,7 @@ type ClusterMember struct {
 	K8sUpdate        bool
 }
 
-// TalosCockpit gère les opérations sur le cluster Talos
+// TalosCockpit managing cluster operations
 type TalosCockpit struct {
 	githubClient     *github.Client
 	webServer        *http.Server
@@ -95,7 +97,7 @@ type ManualUpdateForm struct {
 	ClusterMember
 }
 
-// filterIPv4Addresses filtre et ne conserve que les adresses IPv4 valides
+// filterIPv4Addresses filter IPv4 from list of IP addresses
 func filterIPv4Addresses(addresses []string) []string {
 	var ipv4Addresses []string
 	for _, addr := range addresses {
@@ -107,7 +109,7 @@ func filterIPv4Addresses(addresses []string) []string {
 	return ipv4Addresses
 }
 
-// runCommand exécute une commande système et retourne sa sortie
+// runCommand exec command wrapper
 func (m *TalosCockpit) runCommand(command string, args ...string) (string, error) {
 	cmd := exec.Command(command, args...)
 	output, err := cmd.CombinedOutput()
@@ -218,7 +220,7 @@ func compareVersions(v1, v2 string) int {
 	return len(v1Parts) - len(v2Parts)
 }
 
-// NewTalosCockpit crée une nouvelle instance du gestionnaire de versions
+// NewTalosCockpit create New Version Manager Instance
 func NewTalosCockpit(githubToken string) (*TalosCockpit, error) {
 	if githubToken != "" {
 		ctx := context.Background()
@@ -251,7 +253,16 @@ type Configuration struct {
 	IncludePath string
 }
 
-// Fonction principale qui initialise et démarre le gestionnaire de cluster
+//	@title			Talos Cockpit
+//	@version		0.4
+//	@description	Golang App To manage Talos cluster With somme API calls
+
+//	@contact.name	STROHL Matthieu
+//	@contact.url	https://blog.dive-in-it.com
+//	@contact.email	postmaster@dive-in-it.com
+
+// @host		localhost:8080
+// @BasePath	/
 func main() {
 
 	//////////////////////////////////
@@ -263,7 +274,7 @@ func main() {
 	//fmt.Printf("%+v\n", cfg)
 
 	TalosApiEndpoint = cfg.Talosctl.Endpoint
-
+	// Export Sync loop var
 	if cfg.Schedule.SyncMembers != "" {
 		ss, err := strconv.Atoi(cfg.Schedule.SyncMembers)
 		if err != nil {
@@ -273,6 +284,8 @@ func main() {
 	} else {
 		SyncSched = (5 * time.Minute)
 	}
+
+	// Export Upgrade loop var
 	if cfg.Schedule.SysUpgrade != "" {
 		su, err := strconv.Atoi(cfg.Schedule.SysUpgrade)
 		if err != nil {
@@ -328,25 +341,27 @@ func main() {
 	//////////////////////////////////
 	// Github
 
-	// Récupérer le token GitHub depuis l'environnement
+	// Get Githup token from envvars
 	githubToken := os.Getenv("GITHUB_TOKEN")
 	//if githubToken == "" {
-	//	log.Fatal("Un token GitHub est requis. Définissez GITHUB_TOKEN.")
+	//	log.Fatal("Github Token is required. Set GITHUB_TOKEN.")
 	//}
 
-	// Créer le répertoire pour la base de données
+	//Create local database folder
 	dbDir := filepath.Join(os.Getenv("HOME"), ".talos-cockpit")
 
-	// Ouvrir ou créer la base de données
+	// Open or create Database
 	dbPath := filepath.Join(dbDir, "talos_clusters.db")
 	db, _ := sql.Open("sqlite3", dbPath)
 
-	// Créer une nouvelle instance du gestionnaire
+	// Create New Manager Instance
 	manager, err := NewTalosCockpit(githubToken)
 	if err != nil {
 		log.Fatalf("Échec de l'initialisation du gestionnaire : %v", err)
 	}
 
+	////////////////////////////
+	//  URIs
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(StaticDir))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -390,10 +405,21 @@ func main() {
 	http.HandleFunc("/patch", func(w http.ResponseWriter, r *http.Request) {
 		performPatchHandler(w, r, "")
 	})
+
+	//////////////////////////////////
+	// API
+
+	//http.Handle("/swagger/*", httpSwagger.Handler(
+	//	httpSwagger.URL("swagger.json"), //The url pointing to API definition
+	//))
+	//http.Handle("/swagger/", httpSwagger.WrapHandler)
+
+	// Manage auto upgrade enablement
 	http.HandleFunc("/api/sysupdate", func(w http.ResponseWriter, r *http.Request) {
 		ApiNodeEdit(w, r, db)
 	})
 
+	// Fetch last 4 Releases and last Pre-release
 	versions, err := fetchLastTalosReleases(githubToken)
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -409,74 +435,58 @@ func main() {
 	//////////////////////////////////
 	// talos/talosctl Calls
 
-	//Endpoints du cluster
-	//endpoint := GetEndpoints()
-	//if err != nil {
-	//	log.Fatalf("Impossible de les endpoint du cluster : %v", err)
-	//}
-	//log.Printf("Get Endpoints : %s", endpoint)
-
-	//kubeconfig du cluster
+	// TODO: define if there is a usecase to get kubeconfig from talosAPI
+	//
 	//k8scfg := manager.getKubeConfig(TalosApiEndpoint)
 	//if err != nil {
-	//	log.Fatalf("Impossible de récupérer le kubeconfig du cluster : %v", err)
+	//	log.Fatalf("Can't get kubeconfig from TalosAPI : %v", err)
 	//}
 	//log.Printf("Get Kubeconfig : %s", k8scfg)
 
-	// Récupérer l'ID du cluster
+	// Get cluster ID
 	clusterID, err := manager.getClusterID(TalosApiEndpoint)
 	if err != nil {
-		log.Fatalf("Impossible de récupérer l'ID du cluster : %v", err)
+		log.Fatalf("Can't get ClusterID  : %v", err)
 	}
 	log.Printf("ID du cluster : %s", clusterID)
 
-	// Synchroniser les membres du cluster
+	// Member sync
 	_, err = manager.listAndStoreClusterMembers(TalosApiEndpoint)
 	if err != nil {
-		log.Fatalf("Échec de la synchronisation initiale des membres du cluster : %v", err)
+		log.Fatalf("Member sync failure : %v", err)
 	}
 
-	// Récupérer la dernière version disponible
+	// Fetch last Release
 	if err := manager.fetchLatestRelease(); err != nil {
-		log.Fatalf("Échec de la récupération de la dernière version : %v", err)
+		log.Fatalf("Can't fetch last release  : %v", err)
 	}
 
-	// Récupérer la version actuellement installée
+	// Get Talos Installed version
 	if err := manager.getTalosVersion(TalosApiEndpoint); err != nil {
-		log.Fatalf("Échec de la récupération de la version installée : %v", err)
+		log.Fatalf("Can't get installed Talos version : %v", err)
 	}
 
-	//kconfig := manager.getKubeConfig(TalosApiEndpoint)
-	//if err != nil {
-	//	log.Fatalf("Impossible de récupérer le kubeconfig du cluster : %v", err)
-	//}
-	//log.Printf("Etat du cluster : %s", kconfig)
-
-	// Démarrer le serveur web
+	// WebServer Start
 	manager.startWebServer()
 
-	// Planifier la synchronisation périodique
+	// Schedules
 
 	manager.scheduleClusterSync(SyncSched, TalosApiEndpoint)
 	manager.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
 
 	//////////////////////////////////
 	// K8S API Calls
-	// Récupérer la version actuellement installée
+	//
 
-	//Get Nodes du cluster
-	//nodes := manager.getNodeByLabel("node-role.kubernetes.io/control-plane=")
-	//if err != nil {
-	//	log.Fatalf("Impossible de récupérer le kubeconfig du cluster : %v", err)
-	//}
-	//log.Printf("liste des noeuds avec le label node-role.kubernetes.io/control-plane= : %s", nodes)
-
-	// Attendre un signal d'interruption
+	//////////////////////////////////
+	// Application Close
+	//
+	// Waiting for a SIGTERM
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 
-	// Arrêter proprement le serveur web
+	// Stop webserver properly
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := manager.webServer.Shutdown(ctx); err != nil {

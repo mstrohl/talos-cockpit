@@ -14,7 +14,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// initDatabase initialise la base de données SQLite pour stocker les informations du cluster
+// initDatabase SQLite database init
 func (m *TalosCockpit) initDatabase() error {
 	// Créer le répertoire pour la base de données
 	dbDir := filepath.Join(os.Getenv("HOME"), ".talos-cockpit")
@@ -22,14 +22,14 @@ func (m *TalosCockpit) initDatabase() error {
 		return err
 	}
 
-	// Ouvrir ou créer la base de données
+	// Open or create databse
 	dbPath := filepath.Join(dbDir, "talos_clusters.db")
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return err
 	}
 
-	// Créer les tables nécessaires
+	// Create tables
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS clusters (
 			name TEXT UNIQUE PRIMARY KEY,
@@ -62,7 +62,7 @@ func (m *TalosCockpit) initDatabase() error {
 	return nil
 }
 
-// upsertCluster insère ou met à jour les informations d'un cluster
+// upsertCluster insert or replace cluster information
 func (m *TalosCockpit) upsertCluster(clusterID, endpoint string) (int, error) {
 	result, err := m.db.Exec(`
 		INSERT OR REPLACE INTO clusters (name, endpoint) 
@@ -220,6 +220,7 @@ func (m *TalosCockpit) upsertClusterMembers(clusterID string, members []ClusterM
 	return tx.Commit()
 }
 
+// Update members information
 func (m *TalosCockpit) updateMemberInfo(clusterID string, members []ClusterMember) error {
 	tx, err := m.db.Begin()
 	if err != nil {
