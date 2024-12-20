@@ -2,6 +2,9 @@
 
 ![Static Badge](https://img.shields.io/badge/%20version-v1.22.0-blue?logo=go)
 
+Automated Upgrade Management of your Talos Kubernetes Clusters.
+See it in [DiveInIt](https://blog.dive-in-it.com/en-talos-cockpit/)
+
 ![Talos Cockpit](static/images/talos-cockpit-header.png)
 
 
