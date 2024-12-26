@@ -6,6 +6,6 @@
 	<main id="main">
 		<h1>Dry-run error: </h1>
 		<p>Command result:<br>
-        <b> {{ . }}</b></p>
-		<a href="/spatch">Back</a>
+        <b> {{ .Error }}</b></p>
+		<a href="{{ .Referer }}">Back</a>
 {{end}}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -25,6 +26,11 @@ type Patch struct {
 	Output       string
 	Opt          string
 	MultiPatches string
+}
+
+type PatchFault struct {
+	Referer string
+	Error   error
 }
 
 // Render multi patch template
@@ -93,6 +99,7 @@ func performPatchHandler(w http.ResponseWriter, r *http.Request, option string) 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
+	sourceUri := r.Header.Get("Referer")
 
 	// Récupérer les données du formulaire
 	err := r.ParseForm()
@@ -116,13 +123,16 @@ func performPatchHandler(w http.ResponseWriter, r *http.Request, option string) 
 	var data Patch
 
 	if Operation != "" && Path != "" && Value != "" && MultiPatches == "" {
-
 		cmd := "talosctl -n " + strings.Join(TargetNodes, ",") + " patch machineconfig -p '[{\"op\": \"" + Operation + "\", \"path\": \"" + Path + "\", \"value\": \"" + Value + "\"}]' " + option
 		log.Println("Patch command : ", cmd)
 		output, err := m.runCommand("bash", "-c", cmd)
 		if err != nil {
 			log.Println("performPatch - ERROR -", err)
-			templmanager.RenderTemplate(w, "patch_err.tmpl", err)
+			fault := PatchFault{
+				Error:   err,
+				Referer: sourceUri,
+			}
+			templmanager.RenderTemplate(w, "patch_err.tmpl", fault)
 			return
 		}
 
@@ -139,27 +149,39 @@ func performPatchHandler(w http.ResponseWriter, r *http.Request, option string) 
 		f, erro := os.Create("/app/multi_patches.yaml")
 		if erro != nil {
 			log.Println("performPatch - ERROR - CreatingFile - ", erro)
-			templmanager.RenderTemplate(w, "patch_err.tmpl", erro)
+			fault := PatchFault{
+				Error:   erro,
+				Referer: sourceUri,
+			}
+			templmanager.RenderTemplate(w, "patch_err.tmpl", fault)
 			return
 		}
 		defer f.Close()
 		test, erro := os.Stat("/app/multi_patches.yaml")
 		if erro != nil {
 			log.Println("performPatch - ERROR - StatFile - ", erro)
-			templmanager.RenderTemplate(w, "patch_err.tmpl", erro)
+			fault := PatchFault{
+				Error:   erro,
+				Referer: sourceUri,
+			}
+			templmanager.RenderTemplate(w, "patch_err.tmpl", fault)
 			return
 		}
 		fmt.Println("MultipatchPrint: ", test)
 
 		ln, _ := f.WriteString(MultiPatches)
-		fmt.Printf("MultipatchPrint: %s", ln)
+		fmt.Printf("MultipatchPrint: %v", ln)
 
 		cmd := "talosctl -n " + strings.Join(TargetNodes, ",") + " patch machineconfig -p @/app/multi_patches.yaml " + option
 		log.Println("Patch command : ", cmd)
 		output, err := m.runCommand("bash", "-c", cmd)
 		if err != nil {
 			log.Println("performPatch - ERROR -", err)
-			templmanager.RenderTemplate(w, "patch_err.tmpl", err)
+			fault := PatchFault{
+				Error:   err,
+				Referer: sourceUri,
+			}
+			templmanager.RenderTemplate(w, "patch_err.tmpl", fault)
 			return
 		}
 
@@ -171,9 +193,13 @@ func performPatchHandler(w http.ResponseWriter, r *http.Request, option string) 
 		}
 
 	} else {
-		msg := "performPatch - ERROR - Not Simple Patch neither Multi patches - Operation:" + Operation + "|Path:" + Path + "|Value:" + Value + "|MultiPatches:" + MultiPatches
+		msg := errors.New("performPatch - ERROR - Not Simple Patch neither Multi patches - Operation:" + Operation + "|Path:" + Path + "|Value:" + Value + "|MultiPatches:" + MultiPatches)
 		log.Println(msg)
-		templmanager.RenderTemplate(w, "patch_err.tmpl", msg)
+		fault := PatchFault{
+			Error:   msg,
+			Referer: sourceUri,
+		}
+		templmanager.RenderTemplate(w, "patch_err.tmpl", fault)
 		return
 	}
 
