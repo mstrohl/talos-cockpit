@@ -15,7 +15,7 @@ spec:
         app: talos-cockpit
     spec:
       containers:
-      - image: mstrohl/talos-cockpit:v0.0.3
+      - image: ghcr.io/mstrohl/talos-cockpit:v0.0.4
         imagePullPolicy: Always
         name: talos-cockpit
         resources: {}
