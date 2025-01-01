@@ -124,7 +124,7 @@ func performUpgradeHandler(w http.ResponseWriter, r *http.Request) {
 		sendMail(subject, emailBody)
 		fmt.Fprintf(w, "<p>Upgrade successful for node %s with version %s</p>", MachineID, TargetVersion)
 	}
-	log.Printf("Output: ", string(output))
+	log.Println("Output: ", string(output))
 
 	log.Printf("Upgrade node %s to version %s", MachineID, TargetVersion)
 	//}

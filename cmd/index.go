@@ -24,7 +24,7 @@ type DashboardData struct {
 }
 
 // Render index/dashboard template
-func handleIndex(w http.ResponseWriter, r *http.Request, m *TalosCockpit) {
+func handleIndex(w http.ResponseWriter, m *TalosCockpit) {
 	// Get ClusterID
 	clusterID, err := m.getClusterID(TalosApiEndpoint)
 	if err != nil {

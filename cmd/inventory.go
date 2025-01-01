@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	templmanager "talos-cockpit/internal/tmplmanager"
@@ -48,8 +49,7 @@ func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, err
 			addresses, 
 			created_at,
 			last_updated,
-			auto_sys_update,
-			auto_k8s_update
+			auto_sys_update
 		FROM cluster_members 
 		WHERE cluster_id = ?
 	`, clusterID)
@@ -76,7 +76,6 @@ func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, err
 			&member.CreatedAt,
 			&member.LastUpdated,
 			&member.SysUpdate,
-			&member.K8sUpdate,
 		)
 		member.ClusterID = clusterID
 
@@ -90,8 +89,23 @@ func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, err
 	return members, nil
 }
 
+// getClusterMembers get members of a cluster from database
+func (m *TalosCockpit) getClusterState(clusterID string) (bool, error) {
+	//fmt.Printf("SELECT name, endpoint, auto_k8s_update FROM clusters WHERE cluster_id = %s", clusterID)
+	var state bool
+	// Query for a value based on a single row.
+	if err := m.db.QueryRow("SELECT auto_k8s_update FROM clusters WHERE cluster_id = ?",
+		clusterID).Scan(&state); err != nil {
+		if err == sql.ErrNoRows {
+			return false, fmt.Errorf("getClusterState %s: unknown album", clusterID)
+		}
+		return false, fmt.Errorf("getClusterState %s: %v", clusterID, err)
+	}
+	return state, nil
+}
+
 // Render inventory tempalte
-func handleClusterInventory(w http.ResponseWriter, r *http.Request, db *sql.DB, m *TalosCockpit) {
+func handleClusterInventory(w http.ResponseWriter, m *TalosCockpit) {
 
 	//log.Printf("INVENTORY - TalosApiEndpoint: %s", TalosApiEndpoint)
 	clusterID, err := m.getClusterID(TalosApiEndpoint)
@@ -108,9 +122,12 @@ func handleClusterInventory(w http.ResponseWriter, r *http.Request, db *sql.DB, 
 
 	clientIP, err := m.getNodeIP(TalosApiEndpoint)
 	if err != nil {
-		log.Printf("Cannot Get NodeIP : %v", err)
+		log.Printf("Cannot Get NodeIP : %v \n", err)
 	}
-
+	k8sUpdate, err := m.getClusterState(clusterID)
+	if err != nil {
+		log.Printf("Cannot Get Cluster Update State : %v \n", err)
+	}
 	var membershtml []MemberHTML
 	for _, member := range members {
 		if member.SysUpdate {
@@ -118,7 +135,7 @@ func handleClusterInventory(w http.ResponseWriter, r *http.Request, db *sql.DB, 
 		} else {
 			Syscheckbox = "\u274C"
 		}
-		if m.K8sUpdate {
+		if k8sUpdate {
 			K8scheckbox = "checked"
 		} else {
 			K8scheckbox = ""

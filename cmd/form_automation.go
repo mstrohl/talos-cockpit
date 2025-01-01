@@ -97,6 +97,37 @@ func NodeUpdate(member_id string, cluster_id string, action string, db *sql.DB) 
 	log.Printf("Rows updated : %d", rowsAffected)
 }
 
+// NodeUpdate Update Node information
+func ClusterUpdate(cluster_id string, action string, db *sql.DB) {
+	// Get form values
+	clusterId := cluster_id
+	log.Printf("cluster_id : %s", clusterId)
+	status := action
+	log.Printf("auto_k8s_updates : %v", status)
+
+	var result sql.Result
+	var err error
+
+	if clusterId != "" {
+		log.Printf("UPDATE clusters SET auto_k8s_update = %v WHERE cluster_id = %s", status, clusterId)
+		result, err = db.Exec("UPDATE clusters SET auto_k8s_update = ? WHERE cluster_id = ?", status, clusterId)
+		if err != nil {
+			log.Printf("Erreur de mise à jour : %v", err)
+			return
+		}
+	}
+
+	// Check results
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Impossible de vérifier les lignes affectées : %v", err)
+	}
+	if clusterId != "" {
+		log.Printf("Updating cluster %s set k8s automatic update to %s", clusterId, status)
+	}
+	log.Printf("Rows updated : %d", rowsAffected)
+}
+
 // Apply update on database and redirect to inventory
 func handleNodeUpdate(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	// Check method is a POST
