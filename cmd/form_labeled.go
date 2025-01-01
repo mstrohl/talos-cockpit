@@ -15,7 +15,7 @@ type ReturnLabeled struct {
 	TargetVersion string
 }
 
-func labeledUpgradeHandler(w http.ResponseWriter, r *http.Request) {
+func labeledUpgradeHandler(w http.ResponseWriter) {
 	versions, _ := fetchLastTalosReleases("")
 	//fmt.Println(manual.Versions)
 

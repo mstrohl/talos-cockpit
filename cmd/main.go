@@ -44,9 +44,10 @@ var (
 
 // Cluster contain kubernetes cluster information
 type Cluster struct {
-	ID       int
-	Name     string
-	Endpoint string
+	ID        int
+	Name      string
+	Endpoint  string
+	K8sUpdate bool
 }
 
 // ClusterMember containing details of a Talos Member
@@ -64,7 +65,6 @@ type ClusterMember struct {
 	CreatedAt        time.Time
 	LastUpdated      time.Time
 	SysUpdate        bool
-	K8sUpdate        bool
 }
 
 // TalosCockpit managing cluster operations
@@ -365,18 +365,18 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(StaticDir))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		handleIndex(w, r, manager)
+		handleIndex(w, manager)
 	})
 
 	http.HandleFunc("/inventory", func(w http.ResponseWriter, r *http.Request) {
-		handleClusterInventory(w, r, db, manager)
+		handleClusterInventory(w, manager)
 	})
 
 	http.HandleFunc("/edit", func(w http.ResponseWriter, r *http.Request) {
 		handleNodeEdit(w, r, db)
 	})
 	http.HandleFunc("/dashboard", func(w http.ResponseWriter, r *http.Request) {
-		handleNodeDashboard(w, r, db, manager)
+		handleNodeDashboard(w, r, manager)
 	})
 	http.HandleFunc("/update", func(w http.ResponseWriter, r *http.Request) {
 		handleNodeUpdate(w, r, db)
@@ -388,16 +388,16 @@ func main() {
 		performUpgradeHandler(w, r)
 	})
 	http.HandleFunc("/labelform", func(w http.ResponseWriter, r *http.Request) {
-		labeledUpgradeHandler(w, r)
+		labeledUpgradeHandler(w)
 	})
 	http.HandleFunc("/labelupgrade", func(w http.ResponseWriter, r *http.Request) {
 		performLabeledUpgradeHandler(w, r)
 	})
 	http.HandleFunc("/spatch", func(w http.ResponseWriter, r *http.Request) {
-		patchHandler(w, r, manager)
+		patchHandler(w, manager)
 	})
 	http.HandleFunc("/mpatch", func(w http.ResponseWriter, r *http.Request) {
-		multiPatchHandler(w, r, manager)
+		multiPatchHandler(w, manager)
 	})
 	http.HandleFunc("/drypatch", func(w http.ResponseWriter, r *http.Request) {
 		performPatchHandler(w, r, "--dry-run")

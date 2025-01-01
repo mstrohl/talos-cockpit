@@ -9,8 +9,8 @@ import (
 
 // ApiNodeEdit godoc
 //
-//	@Summary		Manage nodes auto upgrade
-//	@Description	Manage nodes auto upgrade
+//	@Summary		Manage nodes auto upgrade system
+//	@Description	Manage nodes auto upgrade system
 //	@Tags			SysUpdate
 //	@ID				nodeEdit
 //	@Accept			x-www-form-urlencoded
@@ -21,7 +21,7 @@ import (
 //	@Success		200			{integer}	string	"answer"
 //	@Router			/api/sysupdate [post]
 //
-// ApiNodeEdit Provide capability to manage nodes auto upgrade through API calls
+// ApiNodeEdit Provide capability to manage nodes auto upgrade system through API calls
 func ApiNodeEdit(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var idStr string
 	var idCluster string
@@ -61,7 +61,7 @@ func ApiNodeEdit(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	} else if r.URL.Query().Get("cluster_id") != "" {
 		// Get Cluster ID
 		idCluster = r.URL.Query().Get("cluster_id")
-		log.Println("ApiNodeEdit - cluster_id %s set to %v ", idCluster, action)
+		log.Printf("ApiNodeEdit - cluster_id %s set to %v \n", idCluster, action)
 
 		NodeUpdate("", idCluster, action, db)
 
@@ -105,7 +105,7 @@ func ApiNodeUpgrade(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	} else if r.URL.Query().Get("cluster_id") != "" {
 		// Get Cluster ID
 		idCluster = r.URL.Query().Get("cluster_id")
-		log.Println("ApiNodeEdit - cluster_id %s set to %v ", idCluster, version)
+		log.Printf("ApiNodeEdit - cluster_id %s set to %v \n", idCluster, version)
 		members, err := m.getClusterMembers(idCluster)
 		if err != nil {
 			log.Println("Fail to get member list of the cluster ID ", idCluster)

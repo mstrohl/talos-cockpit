@@ -34,7 +34,7 @@ type PatchFault struct {
 }
 
 // Render multi patch template
-func multiPatchHandler(w http.ResponseWriter, r *http.Request, m *TalosCockpit) {
+func multiPatchHandler(w http.ResponseWriter, m *TalosCockpit) {
 	//log.Printf("INVENTORY - TalosApiEndpoint: %s", TalosApiEndpoint)
 	clusterID, err := m.getClusterID(TalosApiEndpoint)
 	if err != nil {
@@ -63,7 +63,7 @@ func multiPatchHandler(w http.ResponseWriter, r *http.Request, m *TalosCockpit) 
 }
 
 // Render single patch template
-func patchHandler(w http.ResponseWriter, r *http.Request, m *TalosCockpit) {
+func patchHandler(w http.ResponseWriter, m *TalosCockpit) {
 	//log.Printf("INVENTORY - TalosApiEndpoint: %s", TalosApiEndpoint)
 	clusterID, err := m.getClusterID(TalosApiEndpoint)
 	if err != nil {

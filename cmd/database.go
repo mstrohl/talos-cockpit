@@ -33,7 +33,8 @@ func (m *TalosCockpit) initDatabase() error {
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS clusters (
 			name TEXT UNIQUE PRIMARY KEY,
-			endpoint TEXT
+			endpoint TEXT,
+			auto_k8s_update TEXT
 		);
 
 		CREATE TABLE IF NOT EXISTS cluster_members (
@@ -48,7 +49,6 @@ func (m *TalosCockpit) initDatabase() error {
 			created_at DATETIME,
 			last_updated DATETIME,
 			auto_sys_update TEXT,
-			auto_k8s_update TEXT,
 			FOREIGN KEY(cluster_id) REFERENCES clusters(name)
 		);
 
@@ -63,11 +63,11 @@ func (m *TalosCockpit) initDatabase() error {
 }
 
 // upsertCluster insert or replace cluster information
-func (m *TalosCockpit) upsertCluster(clusterID, endpoint string) (int, error) {
+func (m *TalosCockpit) upsertCluster(clusterID, endpoint string, auto_k8s_update bool) (int, error) {
 	result, err := m.db.Exec(`
-		INSERT OR REPLACE INTO clusters (name, endpoint) 
-		VALUES (?, ?)
-	`, clusterID, endpoint)
+		INSERT OR REPLACE INTO clusters (name, endpoint, auto_k8s_update) 
+		VALUES (?, ?, ?)
+	`, clusterID, endpoint, auto_k8s_update)
 	if err != nil {
 		return 0, err
 	}
@@ -140,7 +140,6 @@ func (m *TalosCockpit) listAndStoreClusterMembers(endpoint string) ([]ClusterMem
 			IP:               strings.Join(memberData.Spec.Addresses, ", "),
 			LastUpdated:      memberData.Metadata.Updated,
 			SysUpdate:        false,
-			K8sUpdate:        false,
 		}
 		members = append(members, member)
 	}
@@ -150,7 +149,7 @@ func (m *TalosCockpit) listAndStoreClusterMembers(endpoint string) ([]ClusterMem
 	//}
 
 	// Insert Cluster into database
-	_, err = m.upsertCluster(clusterID, "https://kubernetes.default.svc.cluster.local")
+	_, err = m.upsertCluster(clusterID, "https://kubernetes.default.svc.cluster.local", false)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +161,7 @@ func (m *TalosCockpit) listAndStoreClusterMembers(endpoint string) ([]ClusterMem
 	}
 
 	// Update members
-	err = m.updateMemberInfo(clusterID, members)
+	err = m.updateMemberInfo(members)
 	if err != nil {
 		return nil, err
 	}
@@ -179,8 +178,8 @@ func (m *TalosCockpit) upsertClusterMembers(clusterID string, members []ClusterM
 
 	stmt, err := tx.Prepare(`
 		INSERT OR IGNORE INTO cluster_members 
-		(cluster_id, namespace, member_id, hostname, machine_type, config_version, os_version, addresses, created_at, last_updated, auto_sys_update, auto_k8s_update)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		(cluster_id, namespace, member_id, hostname, machine_type, config_version, os_version, addresses, created_at, last_updated, auto_sys_update)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return err
@@ -208,7 +207,6 @@ func (m *TalosCockpit) upsertClusterMembers(clusterID string, members []ClusterM
 				now,
 				member.LastUpdated,
 				false,
-				false,
 			)
 			if err != nil {
 				tx.Rollback()
@@ -221,7 +219,7 @@ func (m *TalosCockpit) upsertClusterMembers(clusterID string, members []ClusterM
 }
 
 // Update members information
-func (m *TalosCockpit) updateMemberInfo(clusterID string, members []ClusterMember) error {
+func (m *TalosCockpit) updateMemberInfo(members []ClusterMember) error {
 	tx, err := m.db.Begin()
 	if err != nil {
 		return err

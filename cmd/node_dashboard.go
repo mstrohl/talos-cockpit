@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"net/http"
 	"strings"
 	templmanager "talos-cockpit/internal/tmplmanager"
@@ -34,7 +33,7 @@ func getNodeMC(endpoint string, m *TalosCockpit) (mc string, err error) {
 }
 
 // Render Node dashboard template
-func handleNodeDashboard(w http.ResponseWriter, r *http.Request, db *sql.DB, m *TalosCockpit) {
+func handleNodeDashboard(w http.ResponseWriter, r *http.Request, m *TalosCockpit) {
 	endpoint := r.URL.Query().Get("member_id")
 	//log.Printf("Dashboard")
 	sourcedmesg, _ := getNodeDmesg(endpoint, m)
