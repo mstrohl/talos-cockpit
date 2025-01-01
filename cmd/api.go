@@ -69,6 +69,59 @@ func ApiNodeEdit(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 }
 
+// ApiClusterEdit godoc
+//
+//	@Summary		Manage cluster auto upgrade K8S
+//	@Description	Manage nodes auto upgrade K8S
+//	@Tags			K8SUpdate
+//	@ID				clusterEdit
+//	@Accept			x-www-form-urlencoded
+//	@Produce		plain
+//	@Param			cluster_id	query		string	false	"used to enable/disable automated k8s upgrade"
+//	@Param			enable		query		string	true	"used to define action enabling or disabling"
+//	@Success		200			{integer}	string	"answer"
+//	@Router			/api/k8supdate [post]
+//
+// ApiClusterEdit Provide capability to manage cluster auto upgrade k8s through API calls
+func ApiClusterEdit(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	var idCluster string
+	var action string
+
+	// Check method is a POST
+	// TODO add a GET to get current config
+	if r.Method != "POST" {
+		http.Error(w, "HTTP-405 Method Not Allowed - Only Method POST is available", 405)
+		log.Printf("ApiClusterEdit - Method Not Allowed")
+		return
+	}
+
+	if r.URL.Query().Get("enable") != "" {
+		action = strings.ToLower(r.URL.Query().Get("enable"))
+		log.Println("ApiClusterEdit - Action param: ", action)
+
+		switch action {
+		case "true":
+			log.Printf("ApiClusterEdit - K8SAutoUpgrade enable ")
+		case "false":
+			log.Printf("ApiClusterEdit - K8SAutoUpgrade disable ")
+		default:
+			http.Error(w, "status param error", http.StatusBadRequest)
+			return
+		}
+
+	}
+
+	if r.URL.Query().Get("cluster_id") != "" {
+		// Get Cluster ID
+		idCluster = r.URL.Query().Get("cluster_id")
+		log.Printf("ApiClusterEdit - K8S upgrade for cluster_id %s set to %v \n", idCluster, action)
+
+		ClusterUpdate(idCluster, action, db)
+
+	}
+
+}
+
 // ApiNodeUpgrade API to provide node upgrade
 func ApiNodeUpgrade(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var m *TalosCockpit

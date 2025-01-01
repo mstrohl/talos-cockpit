@@ -303,18 +303,6 @@ func main() {
 	}
 	log.Println("Talos image installer: ", TalosImageInstaller)
 
-	if cfg.Images.CustomRegistryPath != "" {
-		r := cfg.Images.CustomRegistryPath
-		UpgradeK8SOptions = "--apiserver-image " + r + "/kube-apiserver --controller-manager-image " + r + "/kube-controller-manager --kubelet-image " + r + "/kubelet --scheduler-image " + r + "/kube-scheduler"
-	}
-	if cfg.Images.KubeProxyEnabled {
-		r := cfg.Images.CustomRegistryPath
-		UpgradeK8SOptions = UpgradeK8SOptions + " --proxy-image " + r + "/kube-proxy"
-	}
-	if !cfg.Images.PrePull {
-		UpgradeK8SOptions = UpgradeK8SOptions + " --pre-pull-images=false"
-	}
-	log.Println("K8S upgrade options: ", UpgradeK8SOptions)
 	////// CFG Templates
 	if cfg.Templates.LayoutPath != "" && cfg.Templates.IncludePath != "" {
 		log.Println("layout path: ", cfg.Templates.LayoutPath)
@@ -404,6 +392,14 @@ func main() {
 	})
 	http.HandleFunc("/patch", func(w http.ResponseWriter, r *http.Request) {
 		performPatchHandler(w, r, "")
+	})
+
+	http.HandleFunc("/k8s/manage", func(w http.ResponseWriter, r *http.Request) {
+		availableK8SNodes(w, manager, "node-role.kubernetes.io/control-plane=", "k8s_manage.tmpl")
+	})
+
+	http.HandleFunc("/k8s/upgrade", func(w http.ResponseWriter, r *http.Request) {
+		performK8SUpgrade(w, r, manager)
 	})
 
 	//////////////////////////////////
