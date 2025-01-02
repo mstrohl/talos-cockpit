@@ -1,0 +1,23 @@
+{{define "title"}}Cluster Edit{{end}}
+{{define "content"}}
+<div id="bottom">
+	{{ block "nav" .}} {{end}}
+	<main id="main">
+		<h1>Edit node {{.Name}} configuration</h1>
+		<form action="/k8s/autoupdate" method="post">
+			<label>Name :</label><br>
+			<input type="text" name="cluster_id" value="{{.Name}}" readonly><br><br>
+			
+			<label>Endpoint :</label><br>
+			<input type="text" name="cluster_endpoint" value="{{.Endpoint}}" readonly><br><br>
+			
+			<label>Auto Update Kubernetes :</label><br>
+			<select list="auto_k8s_update" name="auto_k8s_update">
+				<option value=true {{if .K8sUpdate}} selected="selected" {{end}}>True</option>
+				<option value=false {{if not .K8sUpdate}} selected="selected" {{end}}>False</option>
+			</select>
+			<input type="submit" value="Submit">
+		</form>
+		<br>
+		<a href="/inventory">Back</a>
+{{end}}
