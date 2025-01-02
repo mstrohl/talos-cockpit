@@ -395,11 +395,15 @@ func main() {
 	})
 
 	http.HandleFunc("/k8s/manage", func(w http.ResponseWriter, r *http.Request) {
-		availableK8SNodes(w, manager, "node-role.kubernetes.io/control-plane=", "k8s_manage.tmpl")
+		availableK8SNodes(w, manager, "node-role.kubernetes.io/control-plane=", "k8s_upgrade.tmpl")
+	})
+
+	http.HandleFunc("/k8s/dryupgrade", func(w http.ResponseWriter, r *http.Request) {
+		performK8SUpgrade(w, r, manager, "--dry-run")
 	})
 
 	http.HandleFunc("/k8s/upgrade", func(w http.ResponseWriter, r *http.Request) {
-		performK8SUpgrade(w, r, manager)
+		performK8SUpgrade(w, r, manager, "")
 	})
 
 	//////////////////////////////////
