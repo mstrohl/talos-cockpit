@@ -17,6 +17,15 @@ type NodeUpdateReport struct {
 	StatusClass       string
 	AdditionalDetails string
 	Timestamp         string
+	ClusterID         string
+}
+
+type K8SUpdateReport struct {
+	ClusterID         string
+	UpdateStatus      string
+	StatusClass       string
+	AdditionalDetails string
+	Timestamp         string
 }
 
 // SendMail for Alerting purpose
@@ -128,6 +137,92 @@ func generateUpdateEmailBody(report NodeUpdateReport) (string, error) {
 				<p><strong>Previous Version:</strong> {{.PreviousVersion}}</p>
                 <p><strong>Image Source:</strong> {{.ImageSource}}</p>
                 <p><strong>New Version:</strong> {{.NewVersion}}</p>
+                <p><strong>Update Status:</strong> 
+                    <span class="{{.StatusClass}}">{{.UpdateStatus}}</span>
+                </p>
+            </div>
+            
+            <div class="node-info">
+                <h3>Update Details</h3>
+                <p>{{.AdditionalDetails}}</p>
+            </div>
+            
+            <p>This update was processed by Talos Cockpit on {{.Timestamp}}</p>
+        </div>
+    </body>
+    </html>`
+
+	// Create a new template and parse the HTML
+	tmpl, err := template.New("emailTemplate").Parse(htmlTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	// Buffer to store the rendered template
+	var renderedTemplate bytes.Buffer
+
+	// Execute the template with the report data
+	err = tmpl.Execute(&renderedTemplate, report)
+	if err != nil {
+		return "", err
+	}
+
+	return renderedTemplate.String(), nil
+}
+
+func generateK8SUpdateEmailBody(report K8SUpdateReport) (string, error) {
+	// HTML template as a string
+	htmlTemplate := `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            .header {
+                background-color: #f4f4f4;
+                padding: 10px;
+                text-align: center;
+                border-bottom: 2px solid #007bff;
+            }
+            .content {
+                padding: 20px;
+            }
+            .node-info {
+                background-color: #e9ecef;
+                border-radius: 5px;
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            .status-ok {
+                color: #28a745;
+                font-weight: bold;
+            }
+            .status-warning {
+                color: #ffc107;
+                font-weight: bold;
+            }
+            .status-error {
+                color: #dc3545;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Talos Cockpit - Kubernetes Update Report</h1>
+        </div>
+        
+        <div class="content">
+            <div class="node-info">
+                <h2>Node Details</h2>
+                <p><strong>ClusterID:</strong> {{.ClusterID}}</p>
                 <p><strong>Update Status:</strong> 
                     <span class="{{.StatusClass}}">{{.UpdateStatus}}</span>
                 </p>

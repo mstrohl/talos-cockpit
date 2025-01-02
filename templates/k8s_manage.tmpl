@@ -1,0 +1,27 @@
+{{define "title"}}{{ if eq .Opt "" }} Upgrade Kubernetes{{ else if eq .Opt "--dry-run"}} Dry-Run Upgrade {{ end }}{{end}}
+{{define "content"}}
+	<div id="bottom">
+	{{ block "nav" .}} {{end}}
+	<!-- (PART B2) MAIN CONTENT -->
+	<main id="main">
+		<h1>{{ if eq .Opt "" }} Applying {{ else if eq .Opt "--dry-run"}} Dry-run {{ else }} Unknown option for {{ end }} Kubernetes Upgrade: </h1>
+		<h2>Result of the command</h2>
+		<p>{{ if eq .Opt "" }} Apply {{ else if eq .Opt "--dry-run"}} Dry-run {{ else }} Unexpected {{ end }} result:<br>
+        <b> {{ .Output }}</b></p>
+		{{ if eq .Opt "" }}
+		<a class="btn btn-default" href="/k8s/manage">Back</a>
+		{{ else if eq .Opt "--dry-run"}}
+		<h3> Apply config patch ?</h3>
+		<br>
+        <button type="button" class="collapsible" data-toggle="collapse" data-target="#upgrade"><b>Upgrade Info</b></button>
+        <pre id="upgrade" class="collapse" style="width:85%">
+        <p><b>From controller :</b> {{ .Controller }}</p>
+        <p><b>Target Cluster :</b> {{ .ClusterID }}</p>
+        </pre>
+		<form action="/k8s/upgrade" method="post">
+			<input type="hidden" name="ctl" value="{{ .Controller }}"></input>
+			<input type="hidden" name="cluster_id" value="{{ .ClusterID }}"></input>
+			<input type="submit" class="btn btn-primary" value="Apply" onclick="return confirm('Are you sure?')"> <a class="btn btn-default" href="/k8s/manage">Abort</a>
+		</form>    
+    {{end}}
+{{end}}
