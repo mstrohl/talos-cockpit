@@ -8,7 +8,7 @@
     </div>
     <h2>Cluster Members</h2>
     <div class="toggle">
-    <h3><b> Auto Update K8S : </b><input type="checkbox" id="auto_k8s_update" name="auto_k8s_update" {{ .K8scheckbox }}></h3> <a class="btn btn-default" href="/k8s/manage">Manage</a>
+    <h3><b> Auto Update K8S : </b>{{ .K8scheckbox }}<a href="/k8s/clusteredit?cluster_id={{ .ClusterID }}"><i class="fa fa-gear"></i></a></h3> 
     </div>
     <table>
     <tr>
