@@ -94,7 +94,7 @@ func (m *TalosCockpit) getClusterState(clusterID string) (bool, error) {
 	//fmt.Printf("SELECT name, endpoint, auto_k8s_update FROM clusters WHERE cluster_id = %s", clusterID)
 	var state bool
 	// Query for a value based on a single row.
-	if err := m.db.QueryRow("SELECT auto_k8s_update FROM clusters WHERE cluster_id = ?",
+	if err := m.db.QueryRow("SELECT auto_k8s_update FROM clusters WHERE name = ?",
 		clusterID).Scan(&state); err != nil {
 		if err == sql.ErrNoRows {
 			return false, fmt.Errorf("getClusterState %s: unknown album", clusterID)
@@ -128,17 +128,17 @@ func handleClusterInventory(w http.ResponseWriter, m *TalosCockpit) {
 	if err != nil {
 		log.Printf("Cannot Get Cluster Update State : %v \n", err)
 	}
+	if k8sUpdate {
+		K8scheckbox = "\u2705"
+	} else {
+		K8scheckbox = "\u274C"
+	}
 	var membershtml []MemberHTML
 	for _, member := range members {
 		if member.SysUpdate {
 			Syscheckbox = "\u2705"
 		} else {
 			Syscheckbox = "\u274C"
-		}
-		if k8sUpdate {
-			K8scheckbox = "checked"
-		} else {
-			K8scheckbox = ""
 		}
 
 		// DEBUG

@@ -393,6 +393,12 @@ func main() {
 	http.HandleFunc("/patch", func(w http.ResponseWriter, r *http.Request) {
 		performPatchHandler(w, r, "")
 	})
+	http.HandleFunc("/k8s/clusteredit", func(w http.ResponseWriter, r *http.Request) {
+		handleClusterEdit(w, r, db)
+	})
+	http.HandleFunc("/k8s/autoupdate", func(w http.ResponseWriter, r *http.Request) {
+		handleClusterUpdate(w, r, db)
+	})
 
 	http.HandleFunc("/k8s/manage", func(w http.ResponseWriter, r *http.Request) {
 		availableK8SNodes(w, manager, "node-role.kubernetes.io/control-plane=", "k8s_upgrade.tmpl")
