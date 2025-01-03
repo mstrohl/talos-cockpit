@@ -3,6 +3,7 @@
 # https://hub.docker.com/_/golang
 FROM golang:1.23-bookworm AS builder
 
+ARG APP_VERSION
 # Create and change to the app directory.
 WORKDIR /app
 
@@ -16,7 +17,7 @@ RUN go mod download
 COPY . ./
 
 # Build the binary.
-RUN go build -v -o server ./cmd/
+RUN go build  -ldflags="-X 'main.Version=$APP_VERSION'" -v -o server ./cmd/
 #RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 #    -ldflags="-w -s" \
 #    -o /app/server \

@@ -5,4 +5,19 @@ function scrollBar(id) {
    content.scrollTop = content.scrollHeight;
 }
 </script>
+
+<script>
+function getUrlContent(url) {
+   pageRequest = new XMLHttpRequest()
+   pageRequest.open('GET', url, false);
+   pageRequest.send(null);
+   return pageRequest.responseText; 
+}
+
+//console.log(readFile('/appversion'))
+
+document.getElementById("app_version").innerHTML = getUrlContent('/appversion');
+
+</script>
+
 {{ end }}
