@@ -1,16 +1,14 @@
 {{ define "nav" }}
     <nav id="side" class="mini">
+        <center><i>#️ </i><em id="app_version"></em></center>
         <div id="slinks">
         <a href="/">
-            <i>&#9733;</i> <span>Home</span>
+            <i>🏠</i> <span>Home</span>
         </a>
         <a href="/inventory">
-            <i>&#9733;</i> <span>Cluster Inventory</span>
+            <i>📋</i> <span>Cluster Inventory</span>
         </a>
-        <a href="/labelform">
-            <i>&#9733;</i> <span>Upgrade By label</span>
-        </a>
-        <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#"><i>&#9733;</i> Kubernetes <span class="caret"></span></a>
+        <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#"><i>☸️</i> <span>Kubernetes</span> <span class="caret"></span></a>
           <ul class="dropdown-menu dropdown-menu-dark">
               <li><a class="dropdown-item active" href="/k8s/manage">Manage</a></li>
               <!-- <li><a class="dropdown-item" href="/mpatch">Multi</a></li>
@@ -19,18 +17,17 @@
               -->
           </ul>
         </li>
-        <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#"><i>&#9733;</i> Talos Config <span class="caret"></span></a>
+        <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#"><i>🚀</i><span>Talos</span> <span class="caret"></span></a>
           <ul class="dropdown-menu dropdown-menu-dark">
-              <li><a class="dropdown-item active" href="/spatch">Single Patch</a></li>
-              <li><a class="dropdown-item" href="/mpatch">Multi Patch</a></li>
-              <!-- <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="#">Separated link</a></li>
-              -->
+              <li><a class="dropdown-item" href="/labelform">Upgrade By label</a></li>
+              <li><hr class="dropdown-divider"></li>
+               <li><a class="dropdown-item active" href="/spatch">Single Config Patch</a></li>
+              <li><a class="dropdown-item" href="/mpatch">Multi Config Patch</a></li>
           </ul>
         </li>
         <li><hr class="dropdown-divider"></li>
         <a href="https://github.com/mstrohl/talos-cockpit/wiki" target="_blank">
-            <i>&#9733;</i> <span>Documentation</span>
+            <i>📖</i> <span>Documentation</span>
         </a>
         </div>
     </nav>

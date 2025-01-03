@@ -30,6 +30,7 @@ import (
 )
 
 var (
+	Version             = "development"
 	SyncSched           time.Duration
 	UpgradeSched        time.Duration
 	Syscheckbox         string
@@ -265,6 +266,7 @@ type Configuration struct {
 // @BasePath	/
 func main() {
 
+	log.Println("Version:\t", Version)
 	//////////////////////////////////
 	// Configs
 
@@ -363,6 +365,11 @@ func main() {
 	http.HandleFunc("/edit", func(w http.ResponseWriter, r *http.Request) {
 		handleNodeEdit(w, r, db)
 	})
+
+	http.HandleFunc("/appversion", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, Version)
+	})
+
 	http.HandleFunc("/dashboard", func(w http.ResponseWriter, r *http.Request) {
 		handleNodeDashboard(w, r, manager)
 	})
