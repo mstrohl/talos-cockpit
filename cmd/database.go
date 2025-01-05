@@ -84,9 +84,14 @@ func (m *TalosCockpit) listAndStoreClusterMembers(endpoint string) ([]ClusterMem
 		return nil, fmt.Errorf("Cannot get Cluster ID : %v", err)
 	}
 
+	m.K8sVersionAvailable, err = m.getLatestK8sVersion(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("Fail to get last k8s available version  : %v", err)
+	}
+
 	// Récupérer les membres du cluster
 	//output, err := m.runCommand("talosctl", "get", "members", "-o", "json", "\|", "jq", "-s", ".")
-	cmd := "talosctl -n " + endpoint + " get members -o json | jq -s ."
+	cmd := "talosctl -n " + endpoint + " get members -o json 2>/dev/null | jq -s ."
 	//log.Printf("Command: %s", cmd)
 	output, err := m.runCommand("bash", "-c", cmd)
 	if err != nil {

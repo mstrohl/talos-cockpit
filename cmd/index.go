@@ -13,14 +13,15 @@ import (
 )
 
 type DashboardData struct {
-	ClientIP        string
-	ClusterID       string
-	LatestOsVersion string
-	LastPreRelease  string
-	SyncSched       time.Duration
-	UpgradeSched    time.Duration
-	NodeCount       int
-	NodeData        []v1.Node
+	ClientIP         string
+	ClusterID        string
+	LatestOsVersion  string
+	LastPreRelease   string
+	SyncSched        time.Duration
+	UpgradeSched     time.Duration
+	NodeCount        int
+	NodeData         []v1.Node
+	LatestK8sVersion string
 }
 
 // Render index/dashboard template
@@ -47,18 +48,24 @@ func handleIndex(w http.ResponseWriter, m *TalosCockpit) {
 
 	clientIP, err := m.getNodeIP(TalosApiEndpoint)
 	if err != nil {
-		log.Printf("Échec de la récupération du NodeIP : %v", err)
+		log.Printf("Fail to get NodeIP : %v", err)
+	}
+
+	latestK8S, err := m.getLatestK8sVersion(TalosApiEndpoint)
+	if err != nil {
+		log.Printf("Fail to get last k8s available version : %v", err)
 	}
 
 	DashboardData := DashboardData{
-		ClientIP:        clientIP,
-		ClusterID:       clusterID,
-		LatestOsVersion: m.LatestOsVersion,
-		SyncSched:       SyncSched,
-		UpgradeSched:    UpgradeSched,
-		LastPreRelease:  LastPreRelease,
-		NodeCount:       len(nodes),
-		NodeData:        data,
+		ClientIP:         clientIP,
+		ClusterID:        clusterID,
+		LatestOsVersion:  m.LatestOsVersion,
+		LatestK8sVersion: latestK8S,
+		SyncSched:        SyncSched,
+		UpgradeSched:     UpgradeSched,
+		LastPreRelease:   LastPreRelease,
+		NodeCount:        len(nodes),
+		NodeData:         data,
 	}
 
 	templmanager.RenderTemplate(w, "index.tmpl", DashboardData)
