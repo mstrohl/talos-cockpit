@@ -30,7 +30,7 @@ import (
 )
 
 var (
-	Version             = "development"
+	Version             = "local"
 	SyncSched           time.Duration
 	UpgradeSched        time.Duration
 	Syscheckbox         string
@@ -369,7 +369,12 @@ func main() {
 	})
 
 	http.HandleFunc("/appversion", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, Version)
+		if Version != "local" {
+			fmt.Fprintf(w, "<a id='app_version' href='https://github.com/mstrohl/talos-cockpit/tree/"+Version+"' target=_blank>"+Version+"</a>")
+
+		} else {
+			fmt.Fprintf(w, "<a id='app_version' href='https://github.com/mstrohl/talos-cockpit/tree/main' target=_blank> Local</a>")
+		}
 	})
 
 	http.HandleFunc("/dashboard", func(w http.ResponseWriter, r *http.Request) {
