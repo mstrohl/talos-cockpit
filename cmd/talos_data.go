@@ -94,6 +94,31 @@ func (m *TalosCockpit) getTalosVersion(endpoint string) error {
 	return nil
 }
 
+// getTalosctlVersion get installed version of talos
+func (m *TalosCockpit) getTalosctlVersion(endpoint string) (string, error) {
+	cmd := "talosctl version -n " + endpoint + " --client | sed $'s/\t/  /g' | yq -o json"
+	output, err := m.runCommand("bash", "-c", cmd)
+	if err != nil {
+		return "", err
+	}
+	//fmt.Printf(output)
+	// Struct to parse json
+	type TalosctlVersion struct {
+		Client struct {
+			Tag string `json:"Tag"`
+		} `json:"Client"`
+	}
+
+	var talosctlVersion TalosctlVersion
+	err = json.Unmarshal([]byte(output), &talosctlVersion)
+	if err != nil {
+		log.Printf("erreur de parsing YAML : %v", err)
+		return "", fmt.Errorf("erreur de parsing YAML : %v", err)
+	}
+	fmt.Printf("Tag: %s", talosctlVersion.Client.Tag)
+	return talosctlVersion.Client.Tag, nil
+}
+
 // getTalosVersion get installed version of talos
 func (m *TalosCockpit) getMemberVersion(endpoint string) (string, error) {
 	cmd := "talosctl version -n " + endpoint + " | sed $'s/\t/  /g' | yq -o json"
@@ -101,8 +126,8 @@ func (m *TalosCockpit) getMemberVersion(endpoint string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf(output)
-	// Structure pour parser les informations du cluster
+	//fmt.Printf(output)
+	// Struct to parse json
 	type VersionData struct {
 		Client struct {
 			Tag string `json:"Tag"`
@@ -118,7 +143,7 @@ func (m *TalosCockpit) getMemberVersion(endpoint string) (string, error) {
 		log.Printf("erreur de parsing YAML : %v", err)
 		return "", fmt.Errorf("erreur de parsing YAML : %v", err)
 	}
-	fmt.Printf("Tag: %s", memberVersion.Client.Tag)
+	fmt.Printf("Tag: %s", memberVersion.Server.Tag)
 	return memberVersion.Server.Tag, nil
 }
 
