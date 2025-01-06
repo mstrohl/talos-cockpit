@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	templmanager "talos-cockpit/internal/tmplmanager"
 	"time"
 )
@@ -14,10 +16,11 @@ type ReturnUpgrade struct {
 }
 
 type Upgrade struct {
-	Controller string
-	ClusterID  string
-	Output     string
-	Opt        string
+	Controller    string
+	ClusterID     string
+	TargetVersion string
+	Output        string
+	Opt           string
 }
 
 type UpgradeFault struct {
@@ -36,7 +39,7 @@ type UpgradeFault struct {
 
 // upgradeKubernetes apply kubernetes upgrade
 
-func (m *TalosCockpit) upgradeKubernetes(controller string, options string) (string, error) {
+func (m *TalosCockpit) upgradeKubernetes(controller string, version string, options string) (string, error) {
 	var cfg Config
 
 	readFile(&cfg)
@@ -62,7 +65,7 @@ func (m *TalosCockpit) upgradeKubernetes(controller string, options string) (str
 
 	// TODO MANAGE VERSION INSTEAD OF LATEST
 	//  + " --to " + k8sversion
-	cmd := "talosctl upgrade-k8s -n " + controller
+	cmd := "talosctl upgrade-k8s -n " + controller + " --to " + version
 	if UpgradeK8SOptions != "" {
 		cmd = cmd + " " + UpgradeK8SOptions
 	}
@@ -90,14 +93,42 @@ func performK8SUpgrade(w http.ResponseWriter, r *http.Request, m *TalosCockpit, 
 	//log.Printf("member_id : %s", MachineID)
 	ClusterID := r.Form.Get("cluster_id")
 	//log.Printf("cluster_id : %s", ClusterID)
+	TargetVersion := r.Form.Get("target_version")
+
+	if strings.HasPrefix(TargetVersion, "v") {
+		log.Printf("target_version : %s", TargetVersion)
+	} else {
+		//http.Error(w, "Error on form - Version has bad format", http.StatusBadRequest)
+		err := fmt.Errorf("Error on form - Version has bad format. Should be like vX.Y.Z")
+		fault := UpgradeFault{
+			Error: err,
+		}
+		templmanager.RenderTemplate(w, "k8s_err.tmpl", fault)
+		return
+	}
+	if TargetVersion == "" {
+		TargetVersion = m.K8sVersionAvailable
+	} else {
+		if compareVersions(TargetVersion, m.K8sVersionAvailable) > 0 {
+			//http.Error(w, "Error on form - Version is higher than the last version available", http.StatusBadRequest)
+			err := fmt.Errorf("Error on form - Version %s is higher than the last version available %s", TargetVersion, m.K8sVersionAvailable)
+			fault := UpgradeFault{
+				Error: err,
+			}
+			templmanager.RenderTemplate(w, "k8s_err.tmpl", fault)
+			return
+		}
+		log.Println("Version targeted %v | Last version available %v", TargetVersion, m.K8sVersionAvailable)
+	}
+
 	var data Upgrade
 	//report := ReturnUpgrade{
 	//	Controller: MachineID,
 	//}
 	//templmanager.RenderTemplate(w, "k8s_upgrade_return.tmpl", report)
 
-	// Update Cluster Dry-run
-	output, err := m.upgradeKubernetes(MachineID, options)
+	// Dry-run or Update Cluster
+	output, err := m.upgradeKubernetes(MachineID, TargetVersion, options)
 	if err != nil {
 		fault := UpgradeFault{
 			Error: err,
@@ -153,10 +184,11 @@ func performK8SUpgrade(w http.ResponseWriter, r *http.Request, m *TalosCockpit, 
 
 	}
 	data = Upgrade{
-		Controller: MachineID,
-		ClusterID:  ClusterID,
-		Output:     output,
-		Opt:        options,
+		Controller:    MachineID,
+		ClusterID:     ClusterID,
+		TargetVersion: TargetVersion,
+		Output:        output,
+		Opt:           options,
 	}
 	log.Printf("Kubernetes Upgrade successful for cluster %s", ClusterID)
 	//}

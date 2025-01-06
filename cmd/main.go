@@ -70,21 +70,22 @@ type ClusterMember struct {
 
 // TalosCockpit managing cluster operations
 type TalosCockpit struct {
-	githubClient     *github.Client
-	webServer        *http.Server
-	db               *sql.DB
-	clientset        *kubernetes.Clientset
-	ConfigVersion    string
-	LatestOsVersion  string
-	InstalledVersion string
-	clientInfo       string
-	SysUpdate        bool
-	K8sUpdate        bool
-	MailRecipient    string
-	MailCc           string
-	MailHost         string
-	MailUsername     string
-	MailPassword     string
+	githubClient        *github.Client
+	webServer           *http.Server
+	db                  *sql.DB
+	clientset           *kubernetes.Clientset
+	ConfigVersion       string
+	LatestOsVersion     string
+	InstalledVersion    string
+	clientInfo          string
+	SysUpdate           bool
+	K8sUpdate           bool
+	MailRecipient       string
+	MailCc              string
+	MailHost            string
+	MailUsername        string
+	MailPassword        string
+	K8sVersionAvailable string
 }
 
 // LatestGithubVersions
@@ -110,6 +111,7 @@ func filterIPv4Addresses(addresses []string) []string {
 	return ipv4Addresses
 }
 
+// TODO replace cmd.CombinedOutput() by managing both output
 // runCommand exec command wrapper
 func (m *TalosCockpit) runCommand(command string, args ...string) (string, error) {
 	cmd := exec.Command(command, args...)

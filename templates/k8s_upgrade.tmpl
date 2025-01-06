@@ -15,6 +15,7 @@
 				<option value="{{ .Hostname }}">{{ .Hostname }}</option>
 			{{end}}
 			</select><br>
+			<label>Target Version :</label> <input type="text" name="target_version" placeholder="Default: talosctl Latest"><br>
 			<input type="hidden" name="cluster_id" value="{{ .ClusterID }}"></input>
 			<br>			
 			<input type="submit" class="btn btn-primary" value="Upgrade Now"> <a class="btn btn-default" href="/inventory">Abort</a>

@@ -106,7 +106,7 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 				}
 				ctl, _ := m.getNodeIP(endpoint)
 				if m.K8sUpdate {
-					_, err := m.upgradeKubernetes(ctl, "")
+					_, err := m.upgradeKubernetes(ctl, "", "")
 					if err != nil {
 						log.Printf("Échec de la mise à jour de Kubernetes : %v", err)
 					}

@@ -15,7 +15,8 @@ import (
 // getClusterID Get id of the talos cluster
 func (m *TalosCockpit) getClusterID(endpoint string) (string, error) {
 	// Exécution de la commande talosctl pour obtenir les informations du cluster
-	output, err := m.runCommand("talosctl", "-n", endpoint, "get", "info", "-o", "json")
+	cmd := "talosctl -n " + endpoint + " get info -o json 2>/dev/null"
+	output, err := m.runCommand("bash", "-c", cmd)
 	if err != nil {
 		return "", err
 	}
@@ -38,8 +39,8 @@ func (m *TalosCockpit) getClusterID(endpoint string) (string, error) {
 
 // getNodeIP get talos node IP
 func (m *TalosCockpit) getNodeIP(endpoint string) (string, error) {
-
-	output, err := m.runCommand("talosctl", "-n", endpoint, "get", "nodeip", "-o", "yaml")
+	cmd := "talosctl -n " + endpoint + " get nodeip -o yaml 2>/dev/null"
+	output, err := m.runCommand("bash", "-c", cmd)
 	if err != nil {
 		return "", err
 	}
@@ -57,6 +58,29 @@ func (m *TalosCockpit) getNodeIP(endpoint string) (string, error) {
 	}
 
 	return nodeInfo.Spec.Addresses[0], nil
+}
+
+// getNodeIP get talos node IP
+func (m *TalosCockpit) getLatestK8sVersion(endpoint string) (string, error) {
+	cmd := "talosctl images default | grep kubelet | cut -d: -f2 2>/dev/null"
+	output, err := m.runCommand("bash", "-c", cmd)
+	if err != nil {
+		return "", err
+	}
+
+	//type NodeInfoData struct {
+	//	Spec struct {
+	//		Addresses []string `yaml:"addresses"`
+	//	} `yaml:"spec"`
+	//}
+
+	//var nodeInfo NodeInfoData
+	//err = yaml.Unmarshal([]byte(output), &nodeInfo)
+	//if err != nil {
+	//	return "", fmt.Errorf("erreur de parsing YAML : %v", err)
+	//}
+
+	return output, nil
 }
 
 // TODO: Check if needed
@@ -108,7 +132,7 @@ func (m *TalosCockpit) getMemberVersion(endpoint string) (string, error) {
 //}
 
 // TODO: Check if needed
-// getKubeConfig
+// getKubeConfig get kubeconfig from TalosAPI
 func (m *TalosCockpit) getKubeConfig(endpoint string) error {
 	if home := homedir.HomeDir(); home != "" {
 		_, err := m.runCommand("talosctl", "-n", endpoint, "kubeconfig", filepath.Join(home, ".kube", "talos-kubeconfig"))
