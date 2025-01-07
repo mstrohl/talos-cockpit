@@ -61,26 +61,16 @@ func (m *TalosCockpit) getNodeIP(endpoint string) (string, error) {
 }
 
 // getNodeIP get talos node IP
-func (m *TalosCockpit) getLatestK8sVersion(endpoint string) (string, error) {
+func (m *TalosCockpit) getLatestK8sVersion() error {
 	cmd := "talosctl images default | grep kubelet | cut -d: -f2 2>/dev/null"
 	output, err := m.runCommand("bash", "-c", cmd)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	//type NodeInfoData struct {
-	//	Spec struct {
-	//		Addresses []string `yaml:"addresses"`
-	//	} `yaml:"spec"`
-	//}
-
-	//var nodeInfo NodeInfoData
-	//err = yaml.Unmarshal([]byte(output), &nodeInfo)
-	//if err != nil {
-	//	return "", fmt.Errorf("erreur de parsing YAML : %v", err)
-	//}
-
-	return output, nil
+	log.Println("getLatestK8sVersion - output:", output)
+	m.K8sVersionAvailable = strings.TrimSpace(output)
+	return nil
 }
 
 // TODO: Check if needed
@@ -115,7 +105,7 @@ func (m *TalosCockpit) getTalosctlVersion(endpoint string) (string, error) {
 		log.Printf("erreur de parsing YAML : %v", err)
 		return "", fmt.Errorf("erreur de parsing YAML : %v", err)
 	}
-	fmt.Printf("Tag: %s", talosctlVersion.Client.Tag)
+	log.Printf("Client Tag: %s\n", talosctlVersion.Client.Tag)
 	return talosctlVersion.Client.Tag, nil
 }
 
@@ -143,7 +133,7 @@ func (m *TalosCockpit) getMemberVersion(endpoint string) (string, error) {
 		log.Printf("erreur de parsing YAML : %v", err)
 		return "", fmt.Errorf("erreur de parsing YAML : %v", err)
 	}
-	fmt.Printf("Tag: %s", memberVersion.Server.Tag)
+	log.Printf("Server Tag: %s\n", memberVersion.Server.Tag)
 	return memberVersion.Server.Tag, nil
 }
 

@@ -5,10 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"sort"
@@ -41,6 +39,7 @@ var (
 	LastPreRelease      string
 	StaticDir           string
 	kubeconfig          *string
+	K8sVersionAvailable string
 )
 
 // Cluster contain kubernetes cluster information
@@ -86,6 +85,7 @@ type TalosCockpit struct {
 	MailUsername        string
 	MailPassword        string
 	K8sVersionAvailable string
+	TalosctlVersion     string
 }
 
 // LatestGithubVersions
@@ -97,29 +97,6 @@ type LatestGithubVersions struct {
 type ManualUpdateForm struct {
 	LatestGithubVersions
 	ClusterMember
-}
-
-// filterIPv4Addresses filter IPv4 from list of IP addresses
-func filterIPv4Addresses(addresses []string) []string {
-	var ipv4Addresses []string
-	for _, addr := range addresses {
-		ip := net.ParseIP(addr)
-		if ip != nil && ip.To4() != nil {
-			ipv4Addresses = append(ipv4Addresses, addr)
-		}
-	}
-	return ipv4Addresses
-}
-
-// TODO replace cmd.CombinedOutput() by managing both output
-// runCommand exec command wrapper
-func (m *TalosCockpit) runCommand(command string, args ...string) (string, error) {
-	cmd := exec.Command(command, args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", string(output), err)
-	}
-	return string(output), nil
 }
 
 // fetchLatestRelease Get LastTalos version from GitHub
@@ -462,6 +439,19 @@ func main() {
 	//	log.Fatalf("Can't get kubeconfig from TalosAPI : %v", err)
 	//}
 	//log.Printf("Get Kubeconfig : %s", k8scfg)
+
+	// Identify cli version in use
+	TalosctlVersion, err := manager.getTalosctlVersion(TalosApiEndpoint)
+	if err != nil {
+		log.Printf("Fail to get talosctl cli version : %v", err)
+	}
+	log.Printf("Talosctl version: %v", TalosctlVersion)
+
+	// Get Talos Installed version
+	if err := manager.getLatestK8sVersion(); err != nil {
+		log.Fatalf("Fail to get last k8s available version : %v", err)
+	}
+	log.Printf("Max K8S version available for that talosctl version : %s", K8sVersionAvailable)
 
 	// Get cluster ID
 	clusterID, err := manager.getClusterID(TalosApiEndpoint)

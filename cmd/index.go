@@ -52,10 +52,10 @@ func handleIndex(w http.ResponseWriter, m *TalosCockpit) {
 		log.Printf("Fail to get NodeIP : %v", err)
 	}
 
-	latestK8S, err := m.getLatestK8sVersion(TalosApiEndpoint)
-	if err != nil {
-		log.Printf("Fail to get last k8s available version : %v", err)
-	}
+	//latestK8S := m.getLatestK8sVersion()
+	//if err != nil {
+	//	log.Printf("Fail to get last k8s available version : %v", err)
+	//}
 
 	cliVersion, err := m.getTalosctlVersion(TalosApiEndpoint)
 	if err != nil {
@@ -66,7 +66,7 @@ func handleIndex(w http.ResponseWriter, m *TalosCockpit) {
 		ClientIP:         clientIP,
 		ClusterID:        clusterID,
 		LatestOsVersion:  m.LatestOsVersion,
-		LatestK8sVersion: latestK8S,
+		LatestK8sVersion: m.K8sVersionAvailable,
 		TalosctlVersion:  cliVersion,
 		SyncSched:        SyncSched,
 		UpgradeSched:     UpgradeSched,
