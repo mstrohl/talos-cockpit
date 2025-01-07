@@ -28,7 +28,7 @@ RUN go build  -ldflags="-X 'main.Version=$APP_VERSION'" -v -o server ./cmd/
 # https://docs.docker.com/develop/develop-images/multistage-build/#use-multi-stage-builds
 FROM debian:bookworm-slim
 
-ARG TALOS_VERSION=v1.8.0
+ARG TALOS_VERSION=v1.9.1
 ARG K8S_VERSION=1.30.3
 ARG YQ_VERSION=v4.44.5
 

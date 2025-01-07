@@ -22,6 +22,7 @@ type DashboardData struct {
 	NodeCount        int
 	NodeData         []v1.Node
 	LatestK8sVersion string
+	TalosctlVersion  string
 }
 
 // Render index/dashboard template
@@ -51,16 +52,22 @@ func handleIndex(w http.ResponseWriter, m *TalosCockpit) {
 		log.Printf("Fail to get NodeIP : %v", err)
 	}
 
-	latestK8S, err := m.getLatestK8sVersion(TalosApiEndpoint)
+	//latestK8S := m.getLatestK8sVersion()
+	//if err != nil {
+	//	log.Printf("Fail to get last k8s available version : %v", err)
+	//}
+
+	cliVersion, err := m.getTalosctlVersion(TalosApiEndpoint)
 	if err != nil {
-		log.Printf("Fail to get last k8s available version : %v", err)
+		log.Printf("Fail to get talosctl cli version : %v", err)
 	}
 
 	DashboardData := DashboardData{
 		ClientIP:         clientIP,
 		ClusterID:        clusterID,
 		LatestOsVersion:  m.LatestOsVersion,
-		LatestK8sVersion: latestK8S,
+		LatestK8sVersion: m.K8sVersionAvailable,
+		TalosctlVersion:  cliVersion,
 		SyncSched:        SyncSched,
 		UpgradeSched:     UpgradeSched,
 		LastPreRelease:   LastPreRelease,

@@ -90,8 +90,6 @@ Define Env vas in you talos-cockpit pod
 | TMPL_LAYOUT_PATH | String | Templates layout path | /app/templates/layouts |
 | TMPL_INCLUDE_PATH | String | Templates path | /app/templates |
 | STATIC_PATH | String | Static path | /app/static |
-| DB_USERNAME | String | NOT USED | |
-| DB_PASSWORD | String | NOT USED | |
 
 ***Vars Required***
 
