@@ -254,7 +254,17 @@ func main() {
 	readEnv(&cfg)
 	//fmt.Printf("%+v\n", cfg)
 
+	//TalosCTL management
 	TalosApiEndpoint = cfg.Talosctl.Endpoint
+	if cfg.Talosctl.Source != "" {
+		TalosctlDownloadUrl := cfg.Talosctl.Source
+		log.Println("talosctl source_url: ", TalosctlDownloadUrl)
+	} else {
+		log.Println("Default static path: /app/static")
+		TalosctlDownloadUrl := "https://github.com/siderolabs/talos/releases/download/v1.9.1/talosctl-linux-amd64"
+		log.Println("talosctl source_url: ", TalosctlDownloadUrl)
+	}
+
 	// Export Sync loop var
 	if cfg.Schedule.SyncMembers != "" {
 		ss, err := strconv.Atoi(cfg.Schedule.SyncMembers)

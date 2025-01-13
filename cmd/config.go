@@ -29,6 +29,7 @@ type Config struct {
 	} `yaml:"schedule"`
 	Talosctl struct {
 		Endpoint string `yaml:"endpoint" envconfig:"TALOS_API_ENDPOINT"`
+		Source   string `yaml:"source_url" envconfig:"TALOSCTL_SOURCE_URL"`
 	} `yaml:"talosctl"`
 	Kubernetes struct {
 		ConfigPath string `yaml:"config" envconfig:"KUBECONFIG"`
