@@ -253,7 +253,6 @@ func main() {
 	readFile(&cfg)
 	readEnv(&cfg)
 	//fmt.Printf("%+v\n", cfg)
-
 	TalosApiEndpoint = cfg.Talosctl.Endpoint
 	// Export Sync loop var
 	if cfg.Schedule.SyncMembers != "" {
@@ -341,9 +340,9 @@ func main() {
 		handleClusterInventory(w, manager)
 	})
 
-	http.HandleFunc("/edit", func(w http.ResponseWriter, r *http.Request) {
-		handleNodeEdit(w, r, db)
-	})
+	//http.HandleFunc("/edit", func(w http.ResponseWriter, r *http.Request) {
+	//	handleNodeEdit(w, r, db)
+	//})
 
 	http.HandleFunc("/appversion", func(w http.ResponseWriter, r *http.Request) {
 		if Version != "local" {
@@ -357,20 +356,23 @@ func main() {
 	http.HandleFunc("/dashboard", func(w http.ResponseWriter, r *http.Request) {
 		handleNodeDashboard(w, r, manager)
 	})
-	http.HandleFunc("/update", func(w http.ResponseWriter, r *http.Request) {
-		handleNodeUpdate(w, r, db)
-	})
-	http.HandleFunc("/req", func(w http.ResponseWriter, r *http.Request) {
-		upgradeHandler(w, r, db)
-	})
-	http.HandleFunc("/manual", func(w http.ResponseWriter, r *http.Request) {
-		performUpgradeHandler(w, r)
-	})
-	http.HandleFunc("/labelform", func(w http.ResponseWriter, r *http.Request) {
-		labeledUpgradeHandler(w)
-	})
-	http.HandleFunc("/labelupgrade", func(w http.ResponseWriter, r *http.Request) {
-		performLabeledUpgradeHandler(w, r)
+	//http.HandleFunc("/update", func(w http.ResponseWriter, r *http.Request) {
+	//	handleNodeUpdate(w, r, db)
+	//})
+	//http.HandleFunc("/req", func(w http.ResponseWriter, r *http.Request) {
+	//	upgradeHandler(w, r, db)
+	//})
+	//http.HandleFunc("/manual", func(w http.ResponseWriter, r *http.Request) {
+	//	performUpgradeHandler(w, r)
+	//})
+	//http.HandleFunc("/labelform", func(w http.ResponseWriter, r *http.Request) {
+	//	labeledUpgradeHandler(w)
+	//})
+	//http.HandleFunc("/labelupgrade", func(w http.ResponseWriter, r *http.Request) {
+	//	performLabeledUpgradeHandler(w, r)
+	//})
+	http.HandleFunc("/sys/upgrade_form", func(w http.ResponseWriter, r *http.Request) {
+		sysUpgradeHandler(w, manager)
 	})
 	http.HandleFunc("/spatch", func(w http.ResponseWriter, r *http.Request) {
 		patchHandler(w, manager)
@@ -413,7 +415,12 @@ func main() {
 
 	// Manage auto upgrade enablement
 	http.HandleFunc("/api/sysupdate", func(w http.ResponseWriter, r *http.Request) {
-		ApiNodeEdit(w, r, db)
+		ApiMemberEdit(w, r, db)
+	})
+
+	// Manage system upgrades
+	http.HandleFunc("/api/sys/updates", func(w http.ResponseWriter, r *http.Request) {
+		apiSysUpgrades(w, r, manager)
 	})
 
 	// Fetch last 4 Releases and last Pre-release

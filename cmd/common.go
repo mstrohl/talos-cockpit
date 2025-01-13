@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"talos-cockpit/internal/services"
 	templmanager "talos-cockpit/internal/tmplmanager"
 
@@ -101,5 +103,20 @@ func DownloadFile(filepath string, url string) error {
 	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
+	return err
+}
+
+func checkVersion(TargetVersion string, Ref string) error {
+	var err error
+	if strings.HasPrefix(TargetVersion, "v") {
+		log.Printf("target_version : %s", TargetVersion)
+	} else {
+		//http.Error(w, "Error on form - Version has bad format", http.StatusBadRequest)
+		err = fmt.Errorf("Error on form - Version has bad format. Should be like vX.Y.Z")
+	}
+	if compareVersions(TargetVersion, Ref) > 0 && TargetVersion != Ref {
+		//http.Error(w, "Error on form - Version is higher than the last version available", http.StatusBadRequest)
+		err = fmt.Errorf("Error on form - Version %s is higher than the last version available %s", TargetVersion, Ref)
+	}
 	return err
 }

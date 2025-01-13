@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	templmanager "talos-cockpit/internal/tmplmanager"
 	"time"
 )
@@ -98,24 +96,11 @@ func performK8SUpgrade(w http.ResponseWriter, r *http.Request, m *TalosCockpit, 
 	if TargetVersion == "" {
 		TargetVersion = m.K8sVersionAvailable
 	} else {
-		if strings.HasPrefix(TargetVersion, "v") {
-			log.Printf("target_version : %s", TargetVersion)
-		} else {
-			//http.Error(w, "Error on form - Version has bad format", http.StatusBadRequest)
-			err := fmt.Errorf("Error on form - Version has bad format. Should be like vX.Y.Z")
+		if err := checkVersion(TargetVersion, m.K8sVersionAvailable); err != nil {
 			fault := UpgradeFault{
 				Error: err,
 			}
-			templmanager.RenderTemplate(w, "k8s_err.tmpl", fault)
-			return
-		}
-		if compareVersions(TargetVersion, m.K8sVersionAvailable) > 0 && TargetVersion != m.K8sVersionAvailable {
-			//http.Error(w, "Error on form - Version is higher than the last version available", http.StatusBadRequest)
-			err := fmt.Errorf("Error on form - Version %s is higher than the last version available %s", TargetVersion, m.K8sVersionAvailable)
-			fault := UpgradeFault{
-				Error: err,
-			}
-			templmanager.RenderTemplate(w, "k8s_err.tmpl", fault)
+			templmanager.RenderTemplate(w, "err.tmpl", fault)
 			return
 		}
 		log.Printf("Version targeted %v | Last version available %v", TargetVersion, m.K8sVersionAvailable)
@@ -193,7 +178,7 @@ func performK8SUpgrade(w http.ResponseWriter, r *http.Request, m *TalosCockpit, 
 	log.Printf("Kubernetes Upgrade successful for cluster %s", ClusterID)
 	//}
 
-	templmanager.RenderTemplate(w, "k8s_manage.tmpl", data)
+	templmanager.RenderTemplate(w, "k8s_apply.tmpl", data)
 
 	// Redirect to index
 	//http.Redirect(w, r, "/inventory", http.StatusSeeOther)

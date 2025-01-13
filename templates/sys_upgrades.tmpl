@@ -1,0 +1,246 @@
+{{define "title"}}System Update{{end}}
+{{define "content"}}
+    <div id="bottom">
+    {{ block "nav" .}} {{end}}
+    <main id="main">
+    <div class="container">
+        <h2>System Update</h2>
+        <form id="updateForm">
+            <div class="form-group">
+                <label>Selection Scope</label>
+                <select id="selectionType" onchange="updateSelectionMethod()">
+                    <option value="machine">By Machine</option>
+                    <option value="label">By Label</option>
+                    <option value="cluster">By Cluster</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="machineSelection">
+                <label>Machines</label>
+                <select multiple>
+                    {{ range .MembersHTML }}
+                    <option>{{ .Hostname }}</option>
+                    {{end}}
+                </select>
+            </div>
+
+            <div class="form-group" id="labelSelection" style="display:none;">
+                <label>Labels (comma-separated)</label>
+                <input type="text" id="labelInput" placeholder="Enter labels: node-role.kubernetes.io/control-plane=,kubevirt.io/schedulable=true ">
+            </div>
+
+            <div class="form-group" id="clusterSelection" style="display:none;">
+                <label>Clusters</label>
+                <select multiple>
+                    <option>{{ .ClusterID }}</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Update Type</label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="updateType" value="latest" id="latestVersionRadio" checked> 
+                        Latest Version
+                    </label>
+                    <label>
+                        <input type="radio" name="updateType" value="specific" id="specificVersionRadio"> 
+                        Specific Version
+                    </label>
+                    <label>
+                        <input type="radio" name="updateType" value="auto" id="autoUpdateRadio"> 
+                        Automatic Updates
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group" id="versionSpecific">
+                <label>Specific Version</label>
+                <select id="specificVersionInput">
+                <!-- <input type="text" id="specificVersionInput" placeholder="Ex: 1.2.3"> -->
+                {{range $val := .Versions}}
+				<option value="{{$val}}">{{$val}}</option>
+			    {{end}}
+                </select>
+            </div>
+
+            <div class="form-group" id="autoUpdateEnabler">
+                <label>Enable/Disable Auto Update</label>
+                <select id="autoUpdateInput">
+                <!-- <input type="text" id="autoUpdateInput" placeholder="Ex: 1.2.3"> -->
+                {{range $val := .Versions}}
+				<option value="{{$val}}">{{$val}}</option>
+			    {{end}}
+                </select>
+            </div>
+
+            <button type="submit" class="submit-btn">Launch Update</button>
+        </form>
+	<div id="responseMessage"></div>
+    </div>
+</body>
+</html>
+{{end}}
+{{ block "customjs" .}}
+    <script>
+        // Function to toggle specific version input visibility
+        function toggleSpecificVersionInput() {
+            const specificVersionRadio = document.getElementById('specificVersionRadio');
+            const versionSpecificDiv = document.getElementById('versionSpecific');
+            const specificVersionInput = document.getElementById('specificVersionInput');
+
+            if (specificVersionRadio.checked) {
+                versionSpecificDiv.style.display = 'block';
+                specificVersionInput.required = true; // Make input required when visible
+            } else {
+                versionSpecificDiv.style.display = 'none';
+                specificVersionInput.required = false;
+                specificVersionInput.value = ''; // Clear the input when hidden
+            }
+        }
+
+        // Function to toggle specific version input visibility
+        function toggleAutoUpdateInput() {
+            const autoUpdateRadio = document.getElementById('autoUpdateRadio');
+            const versionSpecificDiv = document.getElementById('versionSpecific');
+            const autoUpdate = document.getElementById('autoUpdate');
+
+            if (specificVersionRadio.checked) {
+                versionSpecificDiv.style.display = 'block';
+                specificVersionInput.required = true; // Make input required when visible
+            } else {
+                versionSpecificDiv.style.display = 'none';
+                specificVersionInput.required = false;
+                specificVersionInput.value = ''; // Clear the input when hidden
+            }
+        }
+
+        // Add event listeners to update type radio buttons
+        document.querySelectorAll('input[name="updateType"]').forEach(radio => {
+            radio.addEventListener('change', toggleSpecificVersionInput);
+        });
+
+        // Initial setup
+        toggleSpecificVersionInput();
+
+        // Update selection method (previous function remains the same)
+        function updateSelectionMethod() {
+            const selectionType = document.getElementById('selectionType').value;
+            
+            document.getElementById('machineSelection').style.display = 'none';
+            document.getElementById('labelSelection').style.display = 'none';
+            document.getElementById('clusterSelection').style.display = 'none';
+
+            document.getElementById(selectionType + 'Selection').style.display = 'block';
+        }
+
+        document.getElementById('updateForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get Form data
+            const selectionType = document.getElementById('selectionType').value;
+            const updateType = document.querySelector('input[name="updateType"]:checked').value;
+            
+            let selectedItems = '';
+            if (selectionType === 'machine') {
+                const machineSelect = document.querySelector('#machineSelection select');
+                selectedItems = Array.from(machineSelect.selectedOptions).map(option => option.value).join(',');
+            } else if (selectionType === 'label') {
+                selectedItems = document.getElementById('labelInput').value;
+            } else if (selectionType === 'cluster') {
+                const clusterSelect = document.querySelector('#clusterSelection select');
+                selectedItems = Array.from(clusterSelect.selectedOptions).map(option => option.value).join(',');
+            }
+
+            // Modify to handle specific version conditionally
+            const specificVersion = updateType === 'specific' 
+                ? document.getElementById('specificVersionInput').value 
+                : '';
+
+            if (selectedItems.length === 0 && selectionType !== 'label') {
+                // Handle errors
+                const responseMessage = document.getElementById('responseMessage');
+                responseMessage.innerHTML = `
+                    <div style="color: red; margin-top: 20px;">
+                        <strong>Update Failed</strong>
+                        <p>Error: Target not selected</p>
+                    </div>
+                `;
+                console.log(Error('Error: Target not defined'));
+            } else {
+
+            // Construct URL with query parameters
+            const baseUrl = '/api/sys/updates';
+            const queryParams = new URLSearchParams({
+                scope: selectionType,
+                selectedItems: selectedItems,
+                updateType: updateType,
+                specificVersion: specificVersion
+            });
+
+            const urlWithParams = `${baseUrl}?${queryParams.toString()}`;
+
+            // Send data to backend using query parameters
+            fetch(urlWithParams, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Handle successful response
+                const responseMessage = document.getElementById('responseMessage');
+                responseMessage.innerHTML = `
+                    <div style="color: green; margin-top: 20px;">
+                        <strong>Update Successful!</strong>
+                        <p>Status: ${data.status}</p>
+                        <p>Message: ${data.message}</p>
+                        <p>Requested URL: ${urlWithParams}</p>
+                    </div>
+                `;
+                
+                // Optional: Reset form or perform additional actions
+                document.getElementById('updateForm').reset();
+                toggleSpecificVersionInput(); // Reset visibility after form reset
+            })
+            .catch(error => {
+                // Handle errors
+                const responseMessage = document.getElementById('responseMessage');
+                responseMessage.innerHTML = `
+                    <div style="color: red; margin-top: 20px;">
+                        <strong>Update Failed</strong>
+                        <p>Error: ${error.message}</p>
+                    </div>
+                `;
+                console.error('Error:', error);
+            });
+            }
+        });
+
+        // Alternative method using URLSearchParams for more complex scenarios
+        function buildQueryString(params) {
+            return Object.keys(params)
+                .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+                .join('&');
+        }
+
+    
+
+
+
+
+        
+    </script>
+{{ end }}
+
+
+
+
+
+

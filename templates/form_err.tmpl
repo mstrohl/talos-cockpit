@@ -1,0 +1,11 @@
+{{define "title"}}{{.Title}}{{end}}
+{{define "content"}}
+	<div id="bottom">
+	{{ block "nav" .}} {{end}}
+	<!-- (PART B2) MAIN CONTENT -->
+	<main id="main">
+		<h1>Dry-run error: </h1>
+		<p>Command result:<br>
+        <b> {{ .Error }}</b></p>
+		<a class="btn btn-primary" href="/k8s/manage">Back</a>
+{{end}}
