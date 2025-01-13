@@ -2,9 +2,18 @@ package main
 
 import (
 	"log"
+	"net/http"
 
 	"talos-cockpit/internal/services"
+	templmanager "talos-cockpit/internal/tmplmanager"
 )
+
+type SysUpgrade struct {
+	ClusterID       string
+	LatestOsVersion string
+	MembersHTML     []MemberHTML
+	Versions        []string
+}
 
 // upgradeSystem upgrade talos system of a node
 func (m *TalosCockpit) upgradeSystem(node string, installerImage string) error {
@@ -96,4 +105,59 @@ func (m *TalosCockpit) updateGroupByLabel(label string, version string) {
 		//}
 	}
 	return
+}
+
+// Render multi patch template
+func sysUpgradeHandler(w http.ResponseWriter, m *TalosCockpit) {
+	//log.Printf("INVENTORY - TalosApiEndpoint: %s", TalosApiEndpoint)
+	versions, _ := fetchLastTalosReleases("")
+
+	clusterID, err := m.getClusterID(TalosApiEndpoint)
+	if err != nil {
+		http.Error(w, "Cannot get cluster ID", http.StatusInternalServerError)
+		return
+	}
+	//log.Printf("INVENTORY - clusterID: %s", clusterID)
+	members, err := m.getClusterMembers(clusterID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var membershtml []MemberHTML
+	for _, member := range members {
+		if member.SysUpdate {
+			Syscheckbox = "\u2705"
+		} else {
+			Syscheckbox = "\u274C"
+		}
+
+		// DEBUG
+		//log.Printf("Member List:")
+		//fmt.Printf("%+v\n", memberList)
+
+		// Transform members data
+		memberhtml := MemberHTML{
+			Namespace:        member.Namespace,
+			MachineID:        member.MachineID,
+			Hostname:         member.Hostname,
+			Role:             member.Role,
+			ConfigVersion:    member.ConfigVersion,
+			InstalledVersion: member.InstalledVersion,
+			IP:               member.IP,
+			Syscheckbox:      Syscheckbox,
+		}
+		membershtml = append(membershtml, memberhtml)
+
+	}
+
+	data := SysUpgrade{
+		ClusterID:       clusterID,
+		LatestOsVersion: m.LatestOsVersion,
+		MembersHTML:     membershtml,
+		Versions:        versions,
+	}
+
+	// Template form
+	templmanager.RenderTemplate(w, "sys_upgrades.tmpl", data)
+
 }

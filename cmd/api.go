@@ -2,10 +2,19 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
+
+	"talos-cockpit/internal/services"
+	templmanager "talos-cockpit/internal/tmplmanager"
 )
+
+type Response struct {
+	Message string `json:"message"`
+	Status  int    `json:"status"`
+}
 
 // ApiNodeEdit godoc
 //
@@ -168,6 +177,139 @@ func ApiNodeUpgrade(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			m.customUpgradeSystem(member.Hostname, TalosImageInstaller, version)
 		}
 
+	}
+
+}
+
+func apiSysUpgrades(w http.ResponseWriter, r *http.Request, m *TalosCockpit) {
+	// Check method is a POST
+	if r.Method != "POST" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Parse form data
+	//err := r.ParseForm()
+	//if err != nil {
+	//	http.Error(w, "Parsing error on form", http.StatusBadRequest)
+	//	return
+	//}
+
+	// Get form values
+	Scope := r.URL.Query().Get("scope")
+	log.Println("scope : ", Scope)
+	SelectedItems := r.URL.Query().Get("selectedItems")
+	log.Println("selectedItems : ", SelectedItems)
+	Type := r.URL.Query().Get("updateType")
+	log.Println("updateType : ", Type)
+	TargetVersion := r.URL.Query().Get("specificVersion")
+	log.Println("specificVersion : ", TargetVersion)
+
+	// Manage Usage of Latest Version in form
+	if TargetVersion == "" {
+		TargetVersion = m.LatestOsVersion
+	} else {
+		if err := checkVersion(TargetVersion, m.LatestOsVersion); err != nil {
+			fault := UpgradeFault{
+				Error: err,
+			}
+			templmanager.RenderTemplate(w, "form_err.tmpl", fault)
+			return
+		}
+		log.Printf("Version targeted %v | Last version available %v", TargetVersion, m.LatestOsVersion)
+	}
+
+	switch Scope {
+	case "label":
+		log.Printf("apiSysUpgrades - Scope Label ")
+		// Create node service
+		nodeService := services.NewNodeService()
+		// List nodes with a specific label
+		nodes, _, err := nodeService.ListNodesByLabel(SelectedItems)
+		if err != nil {
+			log.Printf("Failed to list nodes: %v", err)
+		}
+		log.Println(nodes)
+		//report := ReturnLabeled{
+		//	Label:         Label,
+		//	NodesMatching: nodes,
+		//	TargetVersion: TargetVersion,
+		//}
+		//
+		//templmanager.RenderTemplate(w, "form_labeled_return.tmpl", report)
+		//m.updateGroupByLabel(SelectedItems, TargetVersion)
+		log.Printf("Upgrade nodes grouped by label %s to version %s", SelectedItems, TargetVersion)
+
+		response := Response{
+			Message: "apiSysUpgrades - Upgrade nodes grouped by label " + SelectedItems + " to version " + TargetVersion,
+			Status:  http.StatusOK,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+
+	case "machine":
+		log.Printf("apiSysUpgrades - Scope Machine ")
+
+		members := strings.Split(SelectedItems, ",")
+
+		log.Printf("Upgrade nodes %s to version %s", SelectedItems, TargetVersion)
+
+		for _, member := range members {
+			log.Println("apiSysUpgrades - INFO - Starting Upgrade on node ", member)
+			//m.customUpgradeSystem(member.Hostname, TalosImageInstaller, TargetVersion)
+
+		}
+
+		log.Printf("Upgrade nodes %s to version %s", SelectedItems, TargetVersion)
+
+		response := Response{
+			Message: "apiSysUpgrades - Upgrade nodes grouped by Machine " + SelectedItems + " to version " + TargetVersion,
+			Status:  http.StatusOK,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+
+	case "cluster":
+		log.Printf("apiSysUpgrades - Scope Cluster ")
+
+		members, err := m.getClusterMembers(SelectedItems)
+		if err != nil {
+			response := Response{
+				Message: "apiSysUpgrades - ERROR - " + Scope + " error getting ClusterMembers ",
+				Status:  http.StatusInternalServerError,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+
+		log.Printf("Upgrade nodes grouped by cluster %s to version %s", SelectedItems, TargetVersion)
+
+		for _, member := range members {
+			msg := "apiSysUpgrades - INFO - " + Scope + " Starting Upgrade on node "
+			log.Println(msg, member)
+			//m.customUpgradeSystem(member.Hostname, TalosImageInstaller, TargetVersion)
+
+		}
+
+		response := Response{
+			Message: "apiSysUpgrades - INFO - Upgrade nodes grouped by cluster " + SelectedItems + " to version " + TargetVersion,
+			Status:  http.StatusOK,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+
+	default:
+		//http.Error(w, "apiSysUpgrades param error", http.StatusBadRequest)
+		log.Printf("Upgrade nodes grouped by label %s to version %s", SelectedItems, TargetVersion)
+
+		response := Response{
+			Message: "apiSysUpgrades - scope param error :" + Scope,
+			Status:  http.StatusBadRequest,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
 	}
 
 }
