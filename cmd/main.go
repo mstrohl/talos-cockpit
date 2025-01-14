@@ -420,7 +420,7 @@ func main() {
 
 	// Manage system upgrades
 	http.HandleFunc("/api/sys/updates", func(w http.ResponseWriter, r *http.Request) {
-		apiSysUpgrades(w, r, manager)
+		apiSysUpgrades(w, r, manager, db)
 	})
 
 	// Fetch last 4 Releases and last Pre-release

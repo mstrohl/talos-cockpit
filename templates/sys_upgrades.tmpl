@@ -19,7 +19,7 @@
                 <label>Machines</label>
                 <select multiple>
                     {{ range .MembersHTML }}
-                    <option>{{ .Hostname }}</option>
+                    <option>{{ .MachineID }}</option>
                     {{end}}
                 </select>
             </div>
@@ -68,9 +68,8 @@
                 <label>Enable/Disable Auto Update</label>
                 <select id="autoUpdateInput">
                 <!-- <input type="text" id="autoUpdateInput" placeholder="Ex: 1.2.3"> -->
-                {{range $val := .Versions}}
-				<option value="{{$val}}">{{$val}}</option>
-			    {{end}}
+				<option value=true>True</option>
+				<option value=false>False</option>
                 </select>
             </div>
 
@@ -102,26 +101,28 @@
         // Function to toggle specific version input visibility
         function toggleAutoUpdateInput() {
             const autoUpdateRadio = document.getElementById('autoUpdateRadio');
-            const versionSpecificDiv = document.getElementById('versionSpecific');
-            const autoUpdate = document.getElementById('autoUpdate');
+            const autoUpdateEnablerDiv = document.getElementById('autoUpdateEnabler');
+            const autoUpdateInput = document.getElementById('autoUpdateInput');
 
-            if (specificVersionRadio.checked) {
-                versionSpecificDiv.style.display = 'block';
-                specificVersionInput.required = true; // Make input required when visible
+            if (autoUpdateRadio.checked) {
+                autoUpdateEnablerDiv.style.display = 'block';
+                autoUpdateInput.required = true; // Make input required when visible
             } else {
-                versionSpecificDiv.style.display = 'none';
-                specificVersionInput.required = false;
-                specificVersionInput.value = ''; // Clear the input when hidden
+                autoUpdateEnablerDiv.style.display = 'none';
+                autoUpdateInput.required = false;
+                autoUpdateInput.value = ''; // Clear the input when hidden
             }
         }
 
         // Add event listeners to update type radio buttons
         document.querySelectorAll('input[name="updateType"]').forEach(radio => {
             radio.addEventListener('change', toggleSpecificVersionInput);
+            radio.addEventListener('change', toggleAutoUpdateInput);
         });
 
         // Initial setup
         toggleSpecificVersionInput();
+        toggleAutoUpdateInput();
 
         // Update selection method (previous function remains the same)
         function updateSelectionMethod() {
@@ -157,6 +158,11 @@
                 ? document.getElementById('specificVersionInput').value 
                 : '';
 
+            // Modify to handle auto Update conditionally
+            const enableAutoUpdate = updateType === 'auto' 
+                ? document.getElementById('autoUpdateInput').value 
+                : '';
+            
             if (selectedItems.length === 0 && selectionType !== 'label') {
                 // Handle errors
                 const responseMessage = document.getElementById('responseMessage');
@@ -175,7 +181,8 @@
                 scope: selectionType,
                 selectedItems: selectedItems,
                 updateType: updateType,
-                specificVersion: specificVersion
+                specificVersion: specificVersion,
+                enableAutoUpdate: enableAutoUpdate
             });
 
             const urlWithParams = `${baseUrl}?${queryParams.toString()}`;

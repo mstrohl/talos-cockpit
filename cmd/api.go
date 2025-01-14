@@ -204,6 +204,8 @@ func apiSysUpgrades(w http.ResponseWriter, r *http.Request, m *TalosCockpit, db 
 	log.Println("updateType : ", Type)
 	TargetVersion := r.URL.Query().Get("specificVersion")
 	log.Println("specificVersion : ", TargetVersion)
+	Enable := r.URL.Query().Get("enableAutoUpdate")
+	log.Println("enableAutoUpdate : ", Enable)
 
 	// Manage Usage of Latest Version in form
 	if TargetVersion == "" {
@@ -232,12 +234,12 @@ func apiSysUpgrades(w http.ResponseWriter, r *http.Request, m *TalosCockpit, db 
 		log.Println(nodes)
 		if Type == "auto" {
 			for _, node := range nodes {
-				NodeUpdate(node, "", action, db)
+				NodeUpdate(node, "", Enable, db)
 			}
+		} else {
+			log.Printf("Upgrade nodes grouped by label %s to version %s", SelectedItems, TargetVersion)
+			m.updateGroupByLabel(SelectedItems, TargetVersion)
 		}
-		m.updateGroupByLabel(SelectedItems, TargetVersion)
-		log.Printf("Upgrade nodes grouped by label %s to version %s", SelectedItems, TargetVersion)
-
 		response := Response{
 			Message: "apiSysUpgrades - Upgrade nodes grouped by label " + SelectedItems + " to version " + TargetVersion,
 			Status:  http.StatusOK,
@@ -254,8 +256,11 @@ func apiSysUpgrades(w http.ResponseWriter, r *http.Request, m *TalosCockpit, db 
 
 		for _, member := range members {
 			log.Println("apiSysUpgrades - INFO - Starting Upgrade on node ", member)
-			//m.customUpgradeSystem(member.Hostname, TalosImageInstaller, TargetVersion)
-
+			if Type == "auto" {
+				NodeUpdate(member, "", Enable, db)
+			} else {
+				m.customUpgradeSystem(member, TalosImageInstaller, TargetVersion)
+			}
 		}
 
 		log.Printf("Upgrade nodes %s to version %s", SelectedItems, TargetVersion)
@@ -284,10 +289,13 @@ func apiSysUpgrades(w http.ResponseWriter, r *http.Request, m *TalosCockpit, db 
 		log.Printf("Upgrade nodes grouped by cluster %s to version %s", SelectedItems, TargetVersion)
 
 		for _, member := range members {
-			msg := "apiSysUpgrades - INFO - " + Scope + " Starting Upgrade on node "
+			msg := "apiSysUpgrades - INFO - " + Scope + " Starting Upgrade on node" + member.MachineID
 			log.Println(msg, member)
-			m.customUpgradeSystem(member.Hostname, TalosImageInstaller, TargetVersion)
-
+			if Type == "auto" {
+				NodeUpdate(member.MachineID, "", Enable, db)
+			} else {
+				m.customUpgradeSystem(member.MachineID, TalosImageInstaller, TargetVersion)
+			}
 		}
 
 		response := Response{
