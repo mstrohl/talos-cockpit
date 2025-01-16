@@ -7,66 +7,84 @@
     Node that answers : {{ .ClientIP }} | Cluster ID: {{ .ClusterID }}
     </div>
     <h1>Talos Cockpit</h1>
+    <h2> Talos System </h2>
     <div class="grid-container">
-    <div class="tile simple">
-        <div class="header">
-        <div id="lastrelease" class="count">{{ .LatestOsVersion }}</div>
-        <div class="title">Version</div>
+        <div class="tile simple">
+            <div class="header">
+                <div id="lastrelease" class="count">{{ .TalosctlVersion }}</div>
+                <div class="title">CLI</div>
+            </div>
+                <div class="body">
+                <div class="title">Talosctl version</div>
+            </div>
         </div>
-        <div class="body">
-        <div class="title">Last release</div>
+        <div class="tile simple">
+            <div class="header">
+                <div id="lastrelease" class="count">{{ .LatestOsVersion }}</div>
+                <div class="title">Version</div>
+            </div>
+                <div class="body">
+                <div class="title">Last release</div>
+            </div>
         </div>
-    </div>
-    <div class="tile warn">
-        <div class="header">
-        <div id="lastprerelease" class="count">{{ .LastPreRelease }}</div>
-        <div class="title">Version</div>
+        <div class="tile warn">
+            <div class="header">
+                <div id="lastprerelease" class="count">{{ .LastPreRelease }}</div>
+                <div class="title">Version</div>
+            </div>
+            <div class="body">
+                <div class="title">Last PRE-release</div>
+            </div>
         </div>
-        <div class="body">
-        <div class="title">Last PRE-release</div>
-        </div>
-    </div>
-    <div class="tile config">
-        <div class="header">
-        <div id="syncsched" class="count">{{ .SyncSched }}</div>
-        <div class="title">Loop</div>
-        </div>
-        <div class="body">
-        <div class="title">Members resync</div>
-        </div>
-    </div>
-    <div class="tile config">
-        <div class="header">
-        <div id="upgradesched" class="count">{{ .UpgradeSched }}</div>
-        <div class="title">Loop</div>
-        </div>
-        <div class="body">
-        <div class="title">Auto Upgrade</div>
-        </div>
-    </div>
-    <div class="tile config">
-        <div class="header">
-        <div id="lastk8s" class="count">{{ .LatestK8sVersion }}</div>
-        <div class="title">K8S Latest</div>
-        </div>
-        <div class="body">
-        <div class="title">Available Version</div>
-        </div>
-    </div>
     </div>
     <br>
-    <h2> Cluster details <h2>
+    <h2> Kubernetes <h2>
     <div class="grid-container">
-      <div class="tile simple">
-        <a href="/inventory" class="fill-div">
-        <div class="header">
-        <div id="nodecount" class="count">{{ .NodeCount }}</div>
-        <div class="title">Nodes</div>
+        <div class="tile config">
+            <div class="header">
+                <div id="lastk8s" class="count">{{ .LatestK8sVersion }}</div>
+                <div class="title">K8S Latest</div>
+            </div>
+            <div class="body">
+                <div class="title">Available Version</div>
+            </div>
         </div>
-        <div class="body">
-        <div class="title">Number of nodes</div>
-        </div>
-        </a>
     </div>
+    <br>
+    <h2> Cockpit config <h2>
+    <div class="grid-container">
+        <div class="tile config">
+            <div class="header">
+                <div id="syncsched" class="count">{{ .SyncSched }}</div>
+                <div class="title">Loop</div>
+            </div>
+            <div class="body">
+                <div class="title">Members resync</div>
+            </div>
+        </div>
+        <div class="tile config">
+            <div class="header">
+                <div id="upgradesched" class="count">{{ .UpgradeSched }}</div>
+                <div class="title">Loop</div>
+            </div>
+            <div class="body">
+                <div class="title">Auto Upgrade</div>
+            </div>
+        </div>
+    </div>
+    <br>
+    <h3> Cluster details <h3>
+    <div class="grid-container">
+        <div class="tile simple">
+            <a href="/inventory" class="fill-div">
+                <div class="header">
+                    <div id="nodecount" class="count">{{ .NodeCount }}</div>
+                    <div class="title">Nodes</div>
+                </div>
+                <div class="body">
+                    <div class="title">Number of nodes</div>
+                </div>
+            </a>
+        </div>
     </div>
 {{end}}

@@ -1,7 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"io"
+	"net"
 	"net/http"
+	"os"
+	"os/exec"
 	"talos-cockpit/internal/services"
 	templmanager "talos-cockpit/internal/tmplmanager"
 
@@ -17,7 +22,30 @@ type K8SManage struct {
 	NodeList  []Nodes
 }
 
-// Render single patch template
+// filterIPv4Addresses filter IPv4 from list of IP addresses
+func filterIPv4Addresses(addresses []string) []string {
+	var ipv4Addresses []string
+	for _, addr := range addresses {
+		ip := net.ParseIP(addr)
+		if ip != nil && ip.To4() != nil {
+			ipv4Addresses = append(ipv4Addresses, addr)
+		}
+	}
+	return ipv4Addresses
+}
+
+// TODO replace cmd.CombinedOutput() by managing both output
+// runCommand exec command wrapper
+func (m *TalosCockpit) runCommand(command string, args ...string) (string, error) {
+	cmd := exec.Command(command, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", string(output), err)
+	}
+	return string(output), nil
+}
+
+// Render k8s nodes template
 func availableK8SNodes(w http.ResponseWriter, m *TalosCockpit, l string, t string) {
 	//log.Printf("INVENTORY - TalosApiEndpoint: %s", TalosApiEndpoint)
 	/////////////////////
@@ -56,4 +84,22 @@ func availableK8SNodes(w http.ResponseWriter, m *TalosCockpit, l string, t strin
 	// Template form
 	templmanager.RenderTemplate(w, t, data)
 
+}
+
+func DownloadFile(filepath string, url string) error {
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
