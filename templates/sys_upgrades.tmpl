@@ -19,7 +19,7 @@
                 <label>Machines</label>
                 <select multiple>
                     {{ range .MembersHTML }}
-                    <option>{{ .MachineID }}</option>
+                    <option value= {{ .Hostname }}>{{ .MachineID }}</option>
                     {{end}}
                 </select>
             </div>
