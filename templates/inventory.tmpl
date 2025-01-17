@@ -20,7 +20,6 @@
         <th>OS Version</th>
         <th>Adresses</th>
         <th>Auto Sys Update</th>
-        <th>Action</th>
     </tr>
     {{ range .MembersHTML }}
 		<tr>
@@ -31,8 +30,7 @@
 		<td>{{ .ConfigVersion }}</td>
 		<td {{if ne $.LatestOsVersion .InstalledVersion }}style="background-color:red" data-tooltip="Last Release : {{ $.LatestOsVersion }}" {{else}}style="background-color:green"{{end}}><b>{{ .InstalledVersion }}</td>
 		<td>{{ .IP }}</td>
-		<td><center>{{ .Syscheckbox }}<a href="/edit?member_id={{ .MachineID }}"><i class="fa fa-gear"></i></a></center></td>
-		<td><a href="/req?member_id={{ .MachineID }}">Update To...</a></td>
+		<td><center>{{ .Syscheckbox }}</center></td>
 		</tr>
     {{end}}
     </table>

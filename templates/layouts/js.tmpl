@@ -19,5 +19,5 @@ function getUrlContent(url) {
 document.getElementById("app_version").innerHTML = getUrlContent('/appversion');
 
 </script>
-
+{{ block "customjs" .}} {{end}}
 {{ end }}

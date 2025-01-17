@@ -257,3 +257,33 @@ func (m *TalosCockpit) updateMemberInfo(members []ClusterMember) error {
 
 	return tx.Commit()
 }
+
+// Get member information needed to edit system upgrade configuration of a node
+func getMemberInfo(member_id string, db *sql.DB) ClusterMember {
+	// Get memberID
+	idStr := member_id
+
+	var member ClusterMember
+	if idStr != "" {
+		// Check data
+		err := db.QueryRow("SELECT member_id, hostname, os_version, auto_sys_update FROM cluster_members WHERE member_id = ? OR hostname = ?", idStr, idStr).Scan(&member.MachineID, &member.Hostname, &member.InstalledVersion, &member.SysUpdate)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				fmt.Printf("No host found with MachineID : %s\n", idStr)
+			} else {
+				fmt.Printf("Scan error : %v\n", err)
+
+				// Check value before Scan
+				row := db.QueryRow("SELECT member_id, name, email FROM users WHERE member_id = \"?\"", idStr)
+				var member_id, hostname, os_version, auto_sys_update string
+				scanErr := row.Scan(&member_id, &hostname, &os_version, &auto_sys_update)
+
+				fmt.Printf("Values found - member_id: %s, hostname: %s, os_version: %s, auto_sys_update: %s\n", member_id, hostname, os_version, auto_sys_update)
+				fmt.Printf("Detailed Scan error : %v\n", scanErr)
+			}
+		}
+	}
+	return member
+
+}
