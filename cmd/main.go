@@ -23,6 +23,7 @@ import (
 	//httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/google/go-github/v39/github"
+	"github.com/gorhill/cronexpr"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/oauth2"
 	"k8s.io/client-go/kubernetes"
@@ -42,6 +43,7 @@ var (
 	kubeconfig          *string
 	K8sVersionAvailable string
 	UpgradeSafePeriod   = 7
+	Mro                 int
 )
 
 // Cluster contain kubernetes cluster information
@@ -283,6 +285,44 @@ func main() {
 	}
 
 	////// CFG Schedules
+	if cfg.Schedule.MaintenanceWindow.Duration >= 0 {
+		// get maintenance window size
+		Mro := time.Hour * time.Duration(cfg.Schedule.MaintenanceWindow.Duration)
+		log.Println(Mro)
+		if cfg.Schedule.MaintenanceWindow.Daily != "" {
+			MRODaily := cfg.Schedule.MaintenanceWindow.Daily
+			nextDaily := cronexpr.MustParse(MRODaily).Next(time.Now().UTC())
+			endDailyWindow := nextDaily.Add(Mro)
+			log.Println(MRODaily)
+			log.Println(nextDaily)
+			log.Println(endDailyWindow)
+		}
+		if cfg.Schedule.MaintenanceWindow.Weekly != "" {
+			MROWeekly := cfg.Schedule.MaintenanceWindow.Weekly
+			nextWeekly := cronexpr.MustParse(MROWeekly).Next(time.Now().UTC())
+			endWeeklyWindow := nextWeekly.Add(Mro)
+			log.Println(MROWeekly)
+			log.Println(nextWeekly)
+			log.Println(endWeeklyWindow)
+		}
+		if cfg.Schedule.MaintenanceWindow.Biweekly != "" {
+			MROBiweekly := cfg.Schedule.MaintenanceWindow.Biweekly
+			nextBiweekly := cronexpr.MustParse(MROBiweekly).Next(time.Now())
+			endBiweeklyWindow := nextBiweekly.Add(Mro)
+			log.Println(MROBiweekly)
+			log.Println(nextBiweekly)
+			log.Println(endBiweeklyWindow)
+		}
+		if cfg.Schedule.MaintenanceWindow.Monthly != "" {
+			MROMonthly := cfg.Schedule.MaintenanceWindow.Monthly
+			nextMonthly := cronexpr.MustParse(MROMonthly).Next(time.Now())
+			endMonthlyWindow := nextMonthly.Add(Mro)
+			log.Println(MROMonthly)
+			log.Println(nextMonthly)
+			log.Println(endMonthlyWindow)
+		}
+	}
+
 	if cfg.Schedule.UpgradeSafePeriod >= 0 {
 		UpgradeSafePeriod = cfg.Schedule.UpgradeSafePeriod
 	}

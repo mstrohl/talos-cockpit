@@ -37,7 +37,6 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 				if err := m.fetchLatestRelease(); err != nil {
 					log.Printf("Échec de la récupération de la dernière version : %v", err)
 				}
-
 				if err := m.getTalosVersion(endpoint); err != nil {
 					log.Printf("Échec de la récupération de la version installée : %v", err)
 				}

@@ -24,6 +24,13 @@ type Config struct {
 		PrePull          bool `yaml:"prepull" envconfig:"K8S_IMAGE_PREPULL"`
 	} `yaml:"images"`
 	Schedule struct {
+		MaintenanceWindow struct {
+			Duration int    `yaml:"duration" envconfig:"COCKPIT_MRO_WINDOW_SIZE"`
+			Daily    string `yaml:"daily_cron" envconfig:"COCKPIT_DAILY_MRO_WINDOW"`
+			Weekly   string `yaml:"weekly_cron" envconfig:"COCKPIT_WEEKLY_MRO_WINDOW"`
+			Biweekly string `yaml:"biweekly_cron" envconfig:"COCKPIT_BIWEEKLY_MRO_WINDOW"`
+			Monthly  string `yaml:"monthly_cron" envconfig:"COCKPIT_MONTHLY_MRO_WINDOW"`
+		} `yaml:"mro_window"`
 		SyncMembers       string `yaml:"sync_members" envconfig:"COCKPIT_SCHED_SYNC"`
 		SysUpgrade        string `yaml:"sys_upgrade" envconfig:"COCKPIT_SCHED_SYS_UPGRADE"`
 		UpgradeSafePeriod int    `yaml:"upgrade_safe_period" envconfig:"COCKPIT_UPGRADE_SAFE_PERIOD"`
