@@ -54,23 +54,25 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 					return
 				}
 				safeUpgradeDate := m.LatestReleaseDate.AddDate(0, 0, UpgradeSafePeriod)
-				log.Printf("No upgrade before %v for the latest release %s", safeUpgradeDate, m.LatestOsVersion)
+				log.Printf("No auto upgrade before %v for the latest release %s", safeUpgradeDate, m.LatestOsVersion)
 
 				timeLeft := safeUpgradeDate.Sub(time.Now().UTC())
 
-				if timeLeft > time.Hour*24 {
-					days := math.Round(timeLeft.Hours() / 24)
-					log.Printf("%v days remaining for a safe Upgrade", days)
-				} else if timeLeft >= time.Second {
-					log.Printf("%v remainings for a safe Upgrade", timeLeft)
-				} else {
-					timeLeft := time.Now().UTC().Sub(safeUpgradeDate)
-					log.Printf("Safe upgrades available since %v", timeLeft)
-					log.Printf("Launching Upgrade schedule")
-					for _, member := range members {
-						if m.LatestOsVersion != member.InstalledVersion {
-							log.Printf("Latest version %s differs from Installed one %s on node %s", m.LatestOsVersion, member.InstalledVersion, member.MachineID)
-							if member.SysUpdate {
+				for _, member := range members {
+					if m.LatestOsVersion != member.InstalledVersion {
+						log.Printf("Latest version %s differs from Installed one %s on node %s", m.LatestOsVersion, member.InstalledVersion, member.MachineID)
+						if member.SysUpdate {
+
+							if timeLeft > time.Hour*24 {
+								days := math.Round(timeLeft.Hours() / 24)
+								log.Printf("%v days remaining for a safe Upgrade", days)
+							} else if timeLeft >= time.Second {
+								log.Printf("%v remainings for a safe Upgrade", timeLeft)
+							} else {
+								timeLeft := time.Now().UTC().Sub(safeUpgradeDate)
+								log.Printf("Safe upgrades available since %v", timeLeft)
+								log.Printf("Launching Upgrade schedule")
+
 								if err := m.upgradeSystem(member.Hostname, TalosImageInstaller); err != nil {
 									log.Printf("Error during automatic Node Upgrade : %v", err)
 									report := NodeUpdateReport{
@@ -112,22 +114,22 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 
 									sendMail(subject, emailBody)
 								}
-							} else {
-								log.Printf("Automatic Node Upgrade disabled for node: %s", member.Hostname)
 							}
 						} else {
-							log.Printf("Node %s allready up to date", member.Hostname)
-						}
-					}
-					ctl, _ := m.getNodeIP(endpoint)
-					if m.K8sUpdate {
-						_, err := m.upgradeKubernetes(ctl, "", "")
-						if err != nil {
-							log.Printf("Échec de la mise à jour de Kubernetes : %v", err)
+							log.Printf("Automatic Node Upgrade disabled for node: %s", member.Hostname)
 						}
 					} else {
-						log.Printf("Auto Update Kubernetes désactivé pour le cluster: %s", clusterID)
+						log.Printf("Node %s allready up to date", member.Hostname)
 					}
+				}
+				ctl, _ := m.getNodeIP(endpoint)
+				if m.K8sUpdate {
+					_, err := m.upgradeKubernetes(ctl, "", "")
+					if err != nil {
+						log.Printf("Échec de la mise à jour de Kubernetes : %v", err)
+					}
+				} else {
+					log.Printf("Auto Update Kubernetes désactivé pour le cluster: %s", clusterID)
 				}
 			}
 		}
