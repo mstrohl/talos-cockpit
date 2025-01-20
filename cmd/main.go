@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"os/signal"
@@ -502,22 +501,7 @@ func main() {
 
 	manager.scheduleClusterSync(SyncSched, TalosApiEndpoint)
 
-	safeUpgradeDate := manager.LatestReleaseDate.AddDate(0, 0, UpgradeSafePeriod)
-	log.Printf("No upgrade before %v for the latest release %s", safeUpgradeDate, manager.LatestOsVersion)
-
-	timeLeft := safeUpgradeDate.Sub(time.Now().UTC())
-
-	if timeLeft > time.Hour*24 {
-		days := math.Round(timeLeft.Hours() / 24)
-		log.Printf("%v days remaining for a safe Upgrade", days)
-	} else if timeLeft >= time.Second {
-		log.Printf("%v remainings for a safe Upgrade", timeLeft)
-	} else {
-		timeLeft := time.Now().UTC().Sub(safeUpgradeDate)
-		log.Printf("Safe upgrades available since %v", timeLeft)
-		log.Printf("Launching Upgrade schedule")
-		manager.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
-	}
+	manager.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
 	//////////////////////////////////
 	// K8S API Calls
 	//
