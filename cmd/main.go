@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/signal"
@@ -40,6 +41,7 @@ var (
 	StaticDir           string
 	kubeconfig          *string
 	K8sVersionAvailable string
+	UpgradeSafePeriod   = 7
 )
 
 // Cluster contain kubernetes cluster information
@@ -75,6 +77,7 @@ type TalosCockpit struct {
 	clientset           *kubernetes.Clientset
 	ConfigVersion       string
 	LatestOsVersion     string
+	LatestReleaseDate   github.Timestamp
 	InstalledVersion    string
 	clientInfo          string
 	SysUpdate           bool
@@ -107,6 +110,9 @@ func (m *TalosCockpit) fetchLatestRelease() error {
 		return err
 	}
 	m.LatestOsVersion = release.GetTagName()
+	m.LatestReleaseDate = release.GetPublishedAt()
+	log.Println("Last publish: ", m.LatestReleaseDate)
+
 	return nil
 }
 
@@ -244,7 +250,7 @@ type Configuration struct {
 // @host		localhost:8080
 // @BasePath	/
 func main() {
-
+	log.Println("Starting app: ", time.Now().UTC())
 	log.Println("Version:\t", Version)
 	//////////////////////////////////
 	// Configs
@@ -275,6 +281,12 @@ func main() {
 	} else {
 		UpgradeSched = (10 * time.Minute)
 	}
+
+	////// CFG Schedules
+	if cfg.Schedule.UpgradeSafePeriod >= 0 {
+		UpgradeSafePeriod = cfg.Schedule.UpgradeSafePeriod
+	}
+	log.Println("Upgrade Grace Period (days): ", UpgradeSafePeriod)
 	////// CFG Images
 	if cfg.Images.Installer != "" {
 		TalosImageInstaller = cfg.Images.Installer
@@ -489,8 +501,23 @@ func main() {
 	// Schedules
 
 	manager.scheduleClusterSync(SyncSched, TalosApiEndpoint)
-	manager.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
 
+	safeUpgradeDate := manager.LatestReleaseDate.AddDate(0, 0, UpgradeSafePeriod)
+	log.Printf("No upgrade before %v for the latest release %s", safeUpgradeDate, manager.LatestOsVersion)
+
+	timeLeft := safeUpgradeDate.Sub(time.Now().UTC())
+
+	if timeLeft > time.Hour*24 {
+		days := math.Round(timeLeft.Hours() / 24)
+		log.Printf("%v days remaining for a safe Upgrade", days)
+	} else if timeLeft >= time.Second {
+		log.Printf("%v remainings for a safe Upgrade", timeLeft)
+	} else {
+		timeLeft := time.Now().UTC().Sub(safeUpgradeDate)
+		log.Printf("Safe upgrades available since %v", timeLeft)
+		log.Printf("Launching Upgrade schedule")
+		manager.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
+	}
 	//////////////////////////////////
 	// K8S API Calls
 	//
