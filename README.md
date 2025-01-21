@@ -76,6 +76,7 @@ Define Env vas in you talos-cockpit pod
 | COCKPIT_DEBUG | Boolean | Enable log/runtime debug | False |
 | COCKPIT_SCHED_SYNC | Int | Sync and updates each X Minutes | 5 |
 | COCKPIT_SCHED_SYS_UPGRADE | Int | Sync and updates each X Minutes | 10 |
+| COCKPIT_UPGRADE_SAFE_PERIOD | Int | How much days to wait to apply new release | 7 |
 | **TALOS_API_ENDPOINT** | String | Endpoint API used by talos-cockpit | |
 | COCKPIT_CUSTOM_REGISTRY | String | Custom registry path (Ex: registry.example.com/SubPath) | |
 | TALOS_IMAGE_INSTALLER | String | Custom Installer image | "ghcr.io/siderolabs/installer" |
@@ -203,10 +204,8 @@ Replace the **TALOS_API_ENDPOINT** env var by **your controllers vIP** or the IP
 >  selector:
 >    app: talos-cockpit
 
-
-
-
 ## Api usage
 
 curl -X POST "http://localhost:8080/api/sysupdate?member_id=talos-xxx-yyy&enable=true"
+
 curl -X POST "http://localhost:8080/api/sysupdate?cluster_id=xxxxxxxxxxxxx&enable=false"
