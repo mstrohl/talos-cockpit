@@ -40,6 +40,7 @@ var (
 	StaticDir           string
 	kubeconfig          *string
 	K8sVersionAvailable string
+	UpgradeSafePeriod   = 7
 )
 
 // Cluster contain kubernetes cluster information
@@ -75,6 +76,7 @@ type TalosCockpit struct {
 	clientset           *kubernetes.Clientset
 	ConfigVersion       string
 	LatestOsVersion     string
+	LatestReleaseDate   github.Timestamp
 	InstalledVersion    string
 	clientInfo          string
 	SysUpdate           bool
@@ -107,6 +109,9 @@ func (m *TalosCockpit) fetchLatestRelease() error {
 		return err
 	}
 	m.LatestOsVersion = release.GetTagName()
+	m.LatestReleaseDate = release.GetPublishedAt()
+	log.Println("Last publish: ", m.LatestReleaseDate)
+
 	return nil
 }
 
@@ -244,7 +249,7 @@ type Configuration struct {
 // @host		localhost:8080
 // @BasePath	/
 func main() {
-
+	log.Println("Starting app: ", time.Now().UTC())
 	log.Println("Version:\t", Version)
 	//////////////////////////////////
 	// Configs
@@ -275,6 +280,12 @@ func main() {
 	} else {
 		UpgradeSched = (10 * time.Minute)
 	}
+
+	////// CFG Schedules
+	if cfg.Schedule.UpgradeSafePeriod >= 0 {
+		UpgradeSafePeriod = cfg.Schedule.UpgradeSafePeriod
+	}
+	log.Println("Upgrade Grace Period (days): ", UpgradeSafePeriod)
 	////// CFG Images
 	if cfg.Images.Installer != "" {
 		TalosImageInstaller = cfg.Images.Installer
@@ -489,8 +500,8 @@ func main() {
 	// Schedules
 
 	manager.scheduleClusterSync(SyncSched, TalosApiEndpoint)
-	manager.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
 
+	manager.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
 	//////////////////////////////////
 	// K8S API Calls
 	//

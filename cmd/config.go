@@ -24,8 +24,9 @@ type Config struct {
 		PrePull          bool `yaml:"prepull" envconfig:"K8S_IMAGE_PREPULL"`
 	} `yaml:"images"`
 	Schedule struct {
-		SyncMembers string `yaml:"sync_members" envconfig:"COCKPIT_SCHED_SYNC"`
-		SysUpgrade  string `yaml:"sys_upgrade" envconfig:"COCKPIT_SCHED_SYS_UPGRADE"`
+		SyncMembers       string `yaml:"sync_members" envconfig:"COCKPIT_SCHED_SYNC"`
+		SysUpgrade        string `yaml:"sys_upgrade" envconfig:"COCKPIT_SCHED_SYS_UPGRADE"`
+		UpgradeSafePeriod int    `yaml:"upgrade_safe_period" envconfig:"COCKPIT_UPGRADE_SAFE_PERIOD"`
 	} `yaml:"schedule"`
 	Talosctl struct {
 		Endpoint string `yaml:"endpoint" envconfig:"TALOS_API_ENDPOINT"`
