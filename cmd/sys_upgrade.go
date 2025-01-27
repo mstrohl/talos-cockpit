@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"math"
 	"net/http"
+	"time"
 
 	"talos-cockpit/internal/services"
 	templmanager "talos-cockpit/internal/tmplmanager"
@@ -29,7 +31,7 @@ func (m *TalosCockpit) upgradeSystem(node string, installerImage string) error {
 	return err
 }
 
-// TODO: merge with upgradeSystem()
+// Keep it outside legacy upgradeSystem to split automatic upgrade management and human triggered one
 // customUpgradeSystem upgrade with a custom version
 func (m *TalosCockpit) customUpgradeSystem(node string, installerImage string, version string) error {
 	log.Printf("Launch Sytem upgrade to %s for node %s", version, node)
@@ -160,4 +162,24 @@ func sysUpgradeHandler(w http.ResponseWriter, m *TalosCockpit) {
 	// Template form
 	templmanager.RenderTemplate(w, "sys_upgrades.tmpl", data)
 
+}
+
+func safeUpgrade(m *TalosCockpit) {
+	safeUpgradeDate := m.LatestReleaseDate.AddDate(0, 0, UpgradeSafePeriod)
+	log.Printf("No upgrade before %v for the latest release %s", safeUpgradeDate, m.LatestOsVersion)
+
+	timeLeft := safeUpgradeDate.Sub(time.Now().UTC())
+
+	if timeLeft > time.Hour*24 {
+		days := math.Round(timeLeft.Hours() / 24)
+		log.Printf("%v days remaining for a safe Upgrade", days)
+	} else if timeLeft >= time.Second {
+		log.Printf("%v remainings for a safe Upgrade", timeLeft)
+	} else {
+		timeLeft := time.Now().UTC().Sub(safeUpgradeDate)
+		log.Printf("Safe upgrades available since %v", timeLeft)
+
+		log.Printf("Launching Upgrade schedule")
+		m.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
+	}
 }

@@ -25,11 +25,12 @@ type Config struct {
 	} `yaml:"images"`
 	Schedule struct {
 		MaintenanceWindow struct {
-			Duration int    `yaml:"duration" envconfig:"COCKPIT_MRO_WINDOW_SIZE"`
-			Daily    string `yaml:"daily_cron" envconfig:"COCKPIT_DAILY_MRO_WINDOW"`
-			Weekly   string `yaml:"weekly_cron" envconfig:"COCKPIT_WEEKLY_MRO_WINDOW"`
-			Biweekly string `yaml:"biweekly_cron" envconfig:"COCKPIT_BIWEEKLY_MRO_WINDOW"`
-			Monthly  string `yaml:"monthly_cron" envconfig:"COCKPIT_MONTHLY_MRO_WINDOW"`
+			Duration float32 `yaml:"duration" envconfig:"COCKPIT_MRO_WINDOW_SIZE"`
+			Cron     string  `yaml:"cron" envconfig:"COCKPIT_MRO_CRON_WINDOW"`
+			//Daily    string `yaml:"daily_cron" envconfig:"COCKPIT_MRO_DAILY_WINDOW"`
+			//Weekly   string `yaml:"weekly_cron" envconfig:"COCKPIT_MRO_WEEKLY_WINDOW"`
+			//Biweekly string `yaml:"biweekly_cron" envconfig:"COCKPIT_MRO_BIWEEKLY_WINDOW"`
+			//Monthly  string `yaml:"monthly_cron" envconfig:"COCKPIT_MRO_MONTHLY_WINDOW"`
 		} `yaml:"mro_window"`
 		SyncMembers       string `yaml:"sync_members" envconfig:"COCKPIT_SCHED_SYNC"`
 		SysUpgrade        string `yaml:"sys_upgrade" envconfig:"COCKPIT_SCHED_SYS_UPGRADE"`

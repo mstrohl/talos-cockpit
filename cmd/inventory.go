@@ -89,7 +89,7 @@ func (m *TalosCockpit) getClusterMembers(clusterID string) ([]ClusterMember, err
 	return members, nil
 }
 
-// getClusterMembers get members of a cluster from database
+// getClusterState get status of automatic K8S upgrade of a cluster from database
 func (m *TalosCockpit) getClusterState(clusterID string) (bool, error) {
 	//fmt.Printf("SELECT name, endpoint, auto_k8s_update FROM clusters WHERE cluster_id = %s", clusterID)
 	var state bool
@@ -97,7 +97,7 @@ func (m *TalosCockpit) getClusterState(clusterID string) (bool, error) {
 	if err := m.db.QueryRow("SELECT auto_k8s_update FROM clusters WHERE name = ?",
 		clusterID).Scan(&state); err != nil {
 		if err == sql.ErrNoRows {
-			return false, fmt.Errorf("getClusterState %s: unknown album", clusterID)
+			return false, fmt.Errorf("getClusterState %s: unknown cluster", clusterID)
 		}
 		return false, fmt.Errorf("getClusterState %s: %v", clusterID, err)
 	}

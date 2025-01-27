@@ -4,8 +4,12 @@ import (
 	"log"
 	"time"
 
+	"github.com/gorhill/cronexpr"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+var MroUgradeTriggered bool
+var Done chan bool
 
 // scheduleClusterSync manage member list schedules
 func (m *TalosCockpit) scheduleClusterSync(sched time.Duration, endpoint string) {
@@ -30,9 +34,14 @@ func (m *TalosCockpit) scheduleClusterSync(sched time.Duration, endpoint string)
 // scheduleClusterSync manage cluster upgrade schedules
 func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint string) {
 	ticker := time.NewTicker(sched)
+	Done := make(chan bool)
+	log.Println("Upgrade triggered ? ", MroUgradeTriggered)
+
 	go func() {
 		for {
 			select {
+			case <-Done:
+				return
 			case <-ticker.C:
 				if err := m.fetchLatestRelease(); err != nil {
 					log.Printf("Échec de la récupération de la dernière version : %v", err)
@@ -110,9 +119,87 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 						log.Printf("Échec de la mise à jour de Kubernetes : %v", err)
 					}
 				} else {
-					log.Printf("Auto Update Kubernetes désactivé pour le cluster: %s", clusterID)
+					log.Printf("Auto Update Kubernetes disabled for cluster: %s", clusterID)
 				}
 
+			}
+		}
+	}()
+	if !MroUgradeTriggered {
+		ticker.Stop()
+		Done <- true
+		log.Println("MRO - stop ticker")
+	}
+}
+
+// scheduleClusterSync manage cluster upgrade schedules
+func (m *TalosCockpit) scheduleSafeUpgrades(cfg Config) {
+	ticker := time.NewTicker(time.Duration(1) * time.Minute)
+
+	log.Println("scheduleSafeUpgrades - Upgrade triggered ? ", MroUgradeTriggered)
+	go func() {
+		for {
+			select {
+
+			case <-ticker.C:
+
+				if Mro >= time.Second && cfg.Schedule.MaintenanceWindow.Cron != "" {
+					// get maintenance window size
+
+					// To avoid maintenance overlap, no uprgade will be triggered in the last ten minutes
+					safeEnd := time.Minute * 1
+					//log.Println(Mro)
+					MROCron := cfg.Schedule.MaintenanceWindow.Cron
+					nextCron := cronexpr.MustParse(MROCron).Next(time.Now().UTC())
+					nextCronEnd := nextCron.Add(Mro)
+					db_start, db_end := m.getLastSched()
+					beforeStart := db_start.Sub(time.Now().UTC())
+					beforeEnd := db_end.Add(-safeEnd).Sub(time.Now().UTC())
+					// Use case at database startup
+					if db_start.IsZero() {
+						m.upsertSchedules(nextCron, nextCronEnd)
+						log.Printf("MRO - Maintenance has been planed to start %v until %v\n", nextCron, nextCronEnd)
+					} else if beforeStart < time.Second && beforeEnd > time.Minute {
+						// Proceed upgrade
+						log.Printf("MRO - Maintenance started since %v until %v\n", beforeStart, beforeEnd)
+						if !MroUgradeTriggered {
+							MroUgradeTriggered = true
+							safeUpgrade(m)
+							log.Println("MRO - Update has been triggered during the maintenance period")
+						} else {
+							log.Println("MRO - Update already running during the maintenance period")
+						}
+					} else if beforeEnd < time.Second {
+						// End of maintenance has been reached
+						MroUgradeTriggered = false
+						// Upsert database with the next schedule
+						m.upsertSchedules(nextCron, nextCronEnd)
+						log.Printf("MRO - New maintenance has been planed to start %v until %v\n", nextCron, nextCronEnd)
+					} else if beforeStart > time.Second || (beforeStart < time.Second && beforeEnd < time.Minute) {
+						MroUgradeTriggered = false
+						log.Printf("MRO - Waiting for next maintenance planed at %v until %v\n", db_start, db_end)
+						log.Println("MRO_Cron: ", MROCron)
+						log.Println("MRO_NextStart: ", nextCron)
+						log.Println("MRO_NextEnd: ", nextCronEnd)
+						log.Println("MRO_DB_NextStart: ", db_start)
+						log.Println("MRO_DB_NextEnd: ", db_end)
+						log.Println("MRO_DB_timeleft_Start: ", beforeStart)
+						log.Println("MRO_DB_timeleft_End: ", beforeEnd)
+					} else {
+						Done <- true
+						MroUgradeTriggered = false
+						log.Println("MRO - Unindentified usecase - Debugging vars")
+						log.Println("MRO_Cron: ", MROCron)
+						log.Println("MRO_NextStart: ", nextCron)
+						log.Println("MRO_NextEnd: ", nextCronEnd)
+						log.Println("MRO_DB_NextStart: ", db_start)
+						log.Println("MRO_DB_NextEnd: ", db_end)
+						log.Println("MRO_DB_timeleft_Start: ", beforeStart)
+						log.Println("MRO_DB_timeleft_End: ", beforeEnd)
+					}
+				} else {
+					safeUpgrade(m)
+				}
 			}
 		}
 	}()

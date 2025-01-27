@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,7 +22,6 @@ import (
 	//httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/google/go-github/v39/github"
-	"github.com/gorhill/cronexpr"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/oauth2"
 	"k8s.io/client-go/kubernetes"
@@ -43,7 +41,7 @@ var (
 	kubeconfig          *string
 	K8sVersionAvailable string
 	UpgradeSafePeriod   = 7
-	Mro                 int
+	Mro                 time.Duration
 )
 
 // Cluster contain kubernetes cluster information
@@ -285,47 +283,17 @@ func main() {
 	}
 
 	////// CFG Schedules
-	if cfg.Schedule.MaintenanceWindow.Duration >= 0 {
-		// get maintenance window size
-		Mro := time.Hour * time.Duration(cfg.Schedule.MaintenanceWindow.Duration)
-		log.Println(Mro)
-		if cfg.Schedule.MaintenanceWindow.Daily != "" {
-			MRODaily := cfg.Schedule.MaintenanceWindow.Daily
-			nextDaily := cronexpr.MustParse(MRODaily).Next(time.Now().UTC())
-			endDailyWindow := nextDaily.Add(Mro)
-			log.Println(MRODaily)
-			log.Println(nextDaily)
-			log.Println(endDailyWindow)
-		}
-		if cfg.Schedule.MaintenanceWindow.Weekly != "" {
-			MROWeekly := cfg.Schedule.MaintenanceWindow.Weekly
-			nextWeekly := cronexpr.MustParse(MROWeekly).Next(time.Now().UTC())
-			endWeeklyWindow := nextWeekly.Add(Mro)
-			log.Println(MROWeekly)
-			log.Println(nextWeekly)
-			log.Println(endWeeklyWindow)
-		}
-		if cfg.Schedule.MaintenanceWindow.Biweekly != "" {
-			MROBiweekly := cfg.Schedule.MaintenanceWindow.Biweekly
-			nextBiweekly := cronexpr.MustParse(MROBiweekly).Next(time.Now())
-			endBiweeklyWindow := nextBiweekly.Add(Mro)
-			log.Println(MROBiweekly)
-			log.Println(nextBiweekly)
-			log.Println(endBiweeklyWindow)
-		}
-		if cfg.Schedule.MaintenanceWindow.Monthly != "" {
-			MROMonthly := cfg.Schedule.MaintenanceWindow.Monthly
-			nextMonthly := cronexpr.MustParse(MROMonthly).Next(time.Now())
-			endMonthlyWindow := nextMonthly.Add(Mro)
-			log.Println(MROMonthly)
-			log.Println(nextMonthly)
-			log.Println(endMonthlyWindow)
-		}
-	}
-
 	if cfg.Schedule.UpgradeSafePeriod >= 0 {
 		UpgradeSafePeriod = cfg.Schedule.UpgradeSafePeriod
 	}
+	if cfg.Schedule.MaintenanceWindow.Duration >= 1 {
+		Mro = time.Hour * time.Duration(cfg.Schedule.MaintenanceWindow.Duration)
+		log.Println("MRO: ", Mro)
+	} else if cfg.Schedule.MaintenanceWindow.Duration >= 0 && cfg.Schedule.MaintenanceWindow.Duration < 1 {
+		Mro = time.Minute * time.Duration(cfg.Schedule.MaintenanceWindow.Duration*60)
+		log.Println("MRO minute: ", Mro)
+	}
+
 	log.Println("Upgrade Grace Period (days): ", UpgradeSafePeriod)
 	////// CFG Images
 	if cfg.Images.Installer != "" {
@@ -538,26 +506,12 @@ func main() {
 	// WebServer Start
 	manager.startWebServer()
 
+	/////////////////////////
 	// Schedules
 
 	manager.scheduleClusterSync(SyncSched, TalosApiEndpoint)
+	manager.scheduleSafeUpgrades(cfg)
 
-	safeUpgradeDate := manager.LatestReleaseDate.AddDate(0, 0, UpgradeSafePeriod)
-	log.Printf("No upgrade before %v for the latest release %s", safeUpgradeDate, manager.LatestOsVersion)
-
-	timeLeft := safeUpgradeDate.Sub(time.Now().UTC())
-
-	if timeLeft > time.Hour*24 {
-		days := math.Round(timeLeft.Hours() / 24)
-		log.Printf("%v days remaining for a safe Upgrade", days)
-	} else if timeLeft >= time.Second {
-		log.Printf("%v remainings for a safe Upgrade", timeLeft)
-	} else {
-		timeLeft := time.Now().UTC().Sub(safeUpgradeDate)
-		log.Printf("Safe upgrades available since %v", timeLeft)
-		log.Printf("Launching Upgrade schedule")
-		manager.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
-	}
 	//////////////////////////////////
 	// K8S API Calls
 	//
