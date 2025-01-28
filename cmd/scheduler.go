@@ -34,13 +34,14 @@ func (m *TalosCockpit) scheduleClusterSync(sched time.Duration, endpoint string)
 // scheduleClusterSync manage cluster upgrade schedules
 func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint string) {
 	ticker := time.NewTicker(sched)
-	Done := make(chan bool)
+	done := make(chan bool)
 	log.Println("Upgrade triggered ? ", MroUgradeTriggered)
 
 	go func() {
 		for {
 			select {
-			case <-Done:
+			case <-done:
+				log.Println("Ticker Ends")
 				return
 			case <-ticker.C:
 				if err := m.fetchLatestRelease(); err != nil {
@@ -60,6 +61,8 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 					log.Printf("Erreur de récupération de la liste des membres")
 					return
 				}
+				nodeUpToDate := 0
+				nodeCount := len(members)
 				for _, member := range members {
 					if m.LatestOsVersion != member.InstalledVersion {
 						log.Printf("Latest version %s differs from Installed one %s on node %s", m.LatestOsVersion, member.InstalledVersion, member.MachineID)
@@ -85,6 +88,8 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 
 								sendMail(subject, emailBody)
 							} else {
+								nodeUpToDate++
+								log.Printf("%v/%v node up to date", nodeUpToDate, len(members))
 								log.Printf("Operating system of %s Updated to : %s", member.Hostname, TalosImageInstaller)
 								report := NodeUpdateReport{
 									NodeName:          member.Hostname,
@@ -106,9 +111,13 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 								sendMail(subject, emailBody)
 							}
 						} else {
+							nodeUpToDate++
+							log.Printf("%v/%v node up to date", nodeUpToDate, len(members))
 							log.Printf("Automatic Node Upgrade disabled for node: %s", member.Hostname)
 						}
 					} else {
+						nodeUpToDate++
+						log.Printf("%v/%v node up to date", nodeUpToDate, len(members))
 						log.Printf("Node %s allready up to date", member.Hostname)
 					}
 				}
@@ -121,15 +130,16 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 				} else {
 					log.Printf("Auto Update Kubernetes disabled for cluster: %s", clusterID)
 				}
+				// manage Ticker stop
+				if nodeUpToDate == nodeCount {
+					log.Printf("%v/%v node up to date", nodeUpToDate, len(members))
+					log.Println("scheduleClusterUpgrade All nodes ard Up to date")
+					done <- true
+				}
 
 			}
 		}
 	}()
-	if !MroUgradeTriggered {
-		ticker.Stop()
-		Done <- true
-		log.Println("MRO - stop ticker")
-	}
 }
 
 // scheduleClusterSync manage cluster upgrade schedules
@@ -186,7 +196,6 @@ func (m *TalosCockpit) scheduleSafeUpgrades(cfg Config) {
 						log.Println("MRO_DB_timeleft_Start: ", beforeStart)
 						log.Println("MRO_DB_timeleft_End: ", beforeEnd)
 					} else {
-						Done <- true
 						MroUgradeTriggered = false
 						log.Println("MRO - Unindentified usecase - Debugging vars")
 						log.Println("MRO_Cron: ", MROCron)
