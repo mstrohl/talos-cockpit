@@ -83,6 +83,34 @@
                 <div class="title">Maintenance Window</div>
             </div>
         </div>
+        {{ if not .SafetyPeriod }}
+        <div class="tile info">{{else}}
+        <div class="tile config">{{end}}
+            <div class="header">
+                {{ if not .SafetyPeriod }}
+                <div class="title"><br>Mode<br>disabled</div>
+                {{else}}<div id="maintenance" class="count">{{ .SafetyPeriod }}</div>
+                <div class="title">Days</div>{{end}}
+            </div>
+            <div class="body">
+                <div class="title">Update grace period</div>
+            </div>
+        </div>
+        {{ if .SafetyPeriod }}
+        <div class="tile config">
+            <div class="header">
+                {{ if .Timeremaining  }}
+                <div id="maintenance" class="count">{{ .Timeremaining }}</div>
+                <div class="title">Remaining</div>
+                {{else}}
+                <div id="maintenance" class="count"><br>Update<br>authorized</div>
+                {{end}}
+            </div>
+            <div class="body">
+                <div class="title">Grace period ends</div>
+            </div>
+        </div>
+        {{end}}
     </div>
     <br>
     <h3> Cluster details <h3>

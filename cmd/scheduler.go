@@ -112,13 +112,13 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 							}
 						} else {
 							nodeUpToDate++
-							log.Printf("%v/%v node up to date", nodeUpToDate, len(members))
 							log.Printf("Automatic Node Upgrade disabled for node: %s", member.Hostname)
+							log.Printf("%v/%v node treated", nodeUpToDate, len(members))
 						}
 					} else {
 						nodeUpToDate++
-						log.Printf("%v/%v node up to date", nodeUpToDate, len(members))
 						log.Printf("Node %s allready up to date", member.Hostname)
+						log.Printf("%v/%v node treated", nodeUpToDate, len(members))
 					}
 				}
 				ctl, _ := m.getNodeIP(endpoint)
@@ -132,8 +132,8 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 				}
 				// manage Ticker stop
 				if nodeUpToDate == nodeCount {
-					log.Printf("%v/%v node up to date", nodeUpToDate, len(members))
 					log.Println("scheduleClusterUpgrade All nodes ard Up to date")
+					log.Printf("%v/%v node treated", nodeUpToDate, len(members))
 					done <- true
 				}
 

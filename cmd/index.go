@@ -2,7 +2,10 @@ package main
 
 import (
 	"log"
+	"math"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"talos-cockpit/internal/services"
@@ -25,6 +28,7 @@ type DashboardData struct {
 	TalosctlVersion     string
 	MaintenanceDuration time.Duration
 	SafetyPeriod        int
+	Timeremaining       string
 }
 
 // Render index/dashboard template
@@ -64,6 +68,17 @@ func handleIndex(w http.ResponseWriter, m *TalosCockpit) {
 		log.Printf("Fail to get talosctl cli version : %v", err)
 	}
 
+	safeDate := m.LatestReleaseDate.AddDate(0, 0, UpgradeSafePeriod)
+	safetimeLeft := safeDate.Sub(time.Now().UTC())
+	var timesremain string
+	if safetimeLeft > time.Hour*24 {
+		timesremain = strconv.FormatFloat(math.Round(safetimeLeft.Hours()/24), 'f', -1, 64) + "d"
+	} else if safetimeLeft >= time.Second {
+		timesremain = strings.Split(safetimeLeft.String(), "m")[0] + "m"
+	} else {
+		timesremain = ""
+	}
+
 	DashboardData := DashboardData{
 		ClientIP:            clientIP,
 		ClusterID:           clusterID,
@@ -77,6 +92,7 @@ func handleIndex(w http.ResponseWriter, m *TalosCockpit) {
 		NodeData:            data,
 		SafetyPeriod:        UpgradeSafePeriod,
 		MaintenanceDuration: time.Duration(Mro),
+		Timeremaining:       timesremain,
 	}
 
 	templmanager.RenderTemplate(w, "index.tmpl", DashboardData)

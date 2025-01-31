@@ -8,10 +8,13 @@ images:
   
 # schedule configurations
 schedule:
-  sync_members: 1 # Minutes
+  sync_members: 1 # in Minutes
   sys_upgrade: 15
-  upgrade_safe_period: 0 # Days 
-
+  upgrade_safe_period: 7
+  mro_window:
+    duration: 4 # In Hours
+    cron: "0 3 * * *"
+    
 # Talosctl configurations
 talosctl:
   endpoint: "localhost" 
