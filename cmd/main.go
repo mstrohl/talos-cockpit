@@ -41,7 +41,8 @@ var (
 	kubeconfig          *string
 	K8sVersionAvailable string
 	UpgradeSafePeriod   = 7
-	Mro                 time.Duration
+	Mro                 Any
+
 )
 
 // Cluster contain kubernetes cluster information
@@ -286,6 +287,7 @@ func main() {
 	if cfg.Schedule.UpgradeSafePeriod >= 0 {
 		UpgradeSafePeriod = cfg.Schedule.UpgradeSafePeriod
 	}
+
 	if cfg.Schedule.MaintenanceWindow.Duration >= 1 {
 		Mro = time.Hour * time.Duration(cfg.Schedule.MaintenanceWindow.Duration)
 		log.Println("MRO: ", Mro)
@@ -293,6 +295,7 @@ func main() {
 		Mro = time.Minute * time.Duration(cfg.Schedule.MaintenanceWindow.Duration*60)
 		log.Println("MRO minute: ", Mro)
 	}
+
 
 	log.Println("Upgrade Grace Period (days): ", UpgradeSafePeriod)
 	////// CFG Images
@@ -512,6 +515,7 @@ func main() {
 	manager.scheduleClusterSync(SyncSched, TalosApiEndpoint)
 	manager.scheduleSafeUpgrades(cfg)
 
+	manager.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
 	//////////////////////////////////
 	// K8S API Calls
 	//

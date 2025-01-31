@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -227,14 +228,15 @@ func apiSysUpgrades(w http.ResponseWriter, r *http.Request, m *TalosCockpit, db 
 		// Create node service
 		nodeService := services.NewNodeService()
 		// List nodes with a specific label
-		nodes, _, err := nodeService.ListNodesByLabel(SelectedItems)
+		members, _, err := nodeService.ListNodesByLabel(SelectedItems)
 		if err != nil {
-			log.Printf("Failed to list nodes: %v", err)
+			log.Printf("Failed to list members: %v", err)
 		}
-		log.Println(nodes)
+		log.Println(members)
 		if Type == "auto" {
-			for _, node := range nodes {
-				NodeUpdate(node, "", Enable, db)
+			for _, member := range members {
+				host := getMemberInfo(member, db)
+				NodeUpdate(host.MachineID, "", Enable, db)
 			}
 		} else {
 			log.Printf("Upgrade nodes grouped by label %s to version %s", SelectedItems, TargetVersion)
@@ -253,20 +255,23 @@ func apiSysUpgrades(w http.ResponseWriter, r *http.Request, m *TalosCockpit, db 
 		members := strings.Split(SelectedItems, ",")
 
 		log.Printf("Upgrade nodes %s to version %s", SelectedItems, TargetVersion)
-
+		var nodeMsg string
 		for _, member := range members {
-			log.Println("apiSysUpgrades - INFO - Starting Upgrade on node ", member)
+			host := getMemberInfo(member, db)
+			log.Println("apiSysUpgrades - INFO - Starting Upgrade on node ", host.MachineID)
 			if Type == "auto" {
-				NodeUpdate(member, "", Enable, db)
+				NodeUpdate(host.MachineID, "", Enable, db)
+			} else if host.InstalledVersion != TargetVersion {
+				//m.customUpgradeSystem(host.Hostname, TalosImageInstaller, TargetVersion)
+				fmt.Printf("CA PU LA MERDE")
 			} else {
-				m.customUpgradeSystem(member, TalosImageInstaller, TargetVersion)
+				var msg = "apiSysUpgrades - Node " + host.Hostname + " already at version " + TargetVersion + " \n"
+				log.Printf(msg)
+				nodeMsg = nodeMsg + msg
 			}
 		}
-
-		log.Printf("Upgrade nodes %s to version %s", SelectedItems, TargetVersion)
-
 		response := Response{
-			Message: "apiSysUpgrades - Upgrade nodes grouped by Machine " + SelectedItems + " to version " + TargetVersion,
+			Message: nodeMsg + "apiSysUpgrades - Upgrade nodes grouped by Machine " + SelectedItems + " to version " + TargetVersion,
 			Status:  http.StatusOK,
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -287,19 +292,23 @@ func apiSysUpgrades(w http.ResponseWriter, r *http.Request, m *TalosCockpit, db 
 		}
 
 		log.Printf("Upgrade nodes grouped by cluster %s to version %s", SelectedItems, TargetVersion)
-
+		var nodeMsg string
 		for _, member := range members {
 			msg := "apiSysUpgrades - INFO - " + Scope + " Starting Upgrade on node" + member.MachineID
-			log.Println(msg, member)
+			log.Println(msg)
 			if Type == "auto" {
 				NodeUpdate(member.MachineID, "", Enable, db)
+			} else if member.InstalledVersion != TargetVersion {
+				m.customUpgradeSystem(member.Hostname, TalosImageInstaller, TargetVersion)
 			} else {
-				m.customUpgradeSystem(member.MachineID, TalosImageInstaller, TargetVersion)
+				var msg = "apiSysUpgrades - Node " + member.Hostname + " already at version " + TargetVersion + " \n"
+				log.Printf(msg)
+				nodeMsg = nodeMsg + msg
 			}
 		}
 
 		response := Response{
-			Message: "apiSysUpgrades - INFO - Upgrade nodes grouped by cluster " + SelectedItems + " to version " + TargetVersion,
+			Message: nodeMsg + "apiSysUpgrades - INFO - Upgrade nodes grouped by cluster " + SelectedItems + " to version " + TargetVersion,
 			Status:  http.StatusOK,
 		}
 		w.Header().Set("Content-Type", "application/json")

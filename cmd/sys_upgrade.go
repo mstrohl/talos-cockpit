@@ -18,13 +18,13 @@ type SysUpgrade struct {
 }
 
 // upgradeSystem upgrade talos system of a node
-func (m *TalosCockpit) upgradeSystem(node string, installerImage string) error {
-	log.Printf("Launch System upgrade to %s for node %s", m.LatestOsVersion, node)
-	log.Printf("talosctl upgrade -n %s --image %s:%s --preserve=true", node, installerImage, m.LatestOsVersion)
+func (m *TalosCockpit) upgradeSystem(hostname string, installerImage string) error {
+	log.Printf("Launch System upgrade to %s for hostname %s", m.LatestOsVersion, hostname)
+	log.Printf("talosctl upgrade -n %s --image %s:%s --preserve=true", hostname, installerImage, m.LatestOsVersion)
 	_, err := m.runCommand(
 		"talosctl",
 		"upgrade",
-		"-n", node,
+		"-n", hostname,
 		"--image", installerImage+":"+m.LatestOsVersion,
 		"--preserve=true",
 	)
@@ -33,14 +33,14 @@ func (m *TalosCockpit) upgradeSystem(node string, installerImage string) error {
 
 // Keep it outside legacy upgradeSystem to split automatic upgrade management and human triggered one
 // customUpgradeSystem upgrade with a custom version
-func (m *TalosCockpit) customUpgradeSystem(node string, installerImage string, version string) error {
-	log.Printf("Launch Sytem upgrade to %s for node %s", version, node)
-	log.Printf("talosctl upgrade -n %s --image %s:%s --preserve=true", node, installerImage, version)
+func (m *TalosCockpit) customUpgradeSystem(hostname string, installerImage string, version string) error {
+	log.Printf("Launch Sytem upgrade to %s for hostname %s", version, hostname)
+	log.Printf("talosctl upgrade -n %s --image %s:%s --preserve=true", hostname, installerImage, version)
 
 	_, err := m.runCommand(
 		"talosctl",
 		"upgrade",
-		"-n", node,
+		"-n", hostname,
 		"--image", installerImage+":"+m.LatestOsVersion,
 		"--preserve=true",
 	)
@@ -64,47 +64,52 @@ func (m *TalosCockpit) updateGroupByLabel(label string, version string) {
 	for _, node := range nodes {
 		installedVersion, _ := m.getMemberVersion(node)
 		log.Printf("Wanted to upgrade node %s matching label %s from version %s to version %s", nodes, label, installedVersion, version)
-		//if err := m.customUpgradeSystem(node, TalosImageInstaller, version); err != nil {
-		//	log.Printf("Error during automatic Node Upgrade : %v", err)
-		//	report := NodeUpdateReport{
-		//		NodeName:          node,
-		//		PreviousVersion:   installedVersion,
-		//		ImageSource:       TalosImageInstaller,
-		//		NewVersion:        version,
-		//		UpdateStatus:      "Failed",
-		//		AdditionalDetails: "Error during Upgrade Node by label",
-		//		Timestamp:         time.Now().Format("2006-01-02 15:04:05"),
-		//	}
-		//
-		//	subject := "Automatic Node Upgrade"
-		//	// Generate email body
-		//	emailBody, err := generateUpdateEmailBody(report)
-		//	if err != nil {
-		//		return
-		//	}
-		//
-		//	sendMail(subject, emailBody)
-		//} else {
-		//	log.Printf("Operating system of %s Updated to : %s", node, TalosImageInstaller)
-		//	report := NodeUpdateReport{
-		//		NodeName:          node,
-		//		PreviousVersion:   installedVersion,
-		//		ImageSource:       TalosImageInstaller,
-		//		NewVersion:        version,
-		//		UpdateStatus:      "Success",
-		//		AdditionalDetails: "Node updated successfully without any issues",
-		//		Timestamp:         time.Now().Format("2006-01-02 15:04:05"),
-		//	}
-		//
-		//	subject := "Automatic Node Upgrade"
-		//	// Generate email body
-		//	emailBody, err := generateUpdateEmailBody(report)
-		//	if err != nil {
-		//		return
-		//	}
-		//
-		//	sendMail(subject, emailBody)
-		//}
+		if installedVersion != version {
+			if err := m.customUpgradeSystem(node, TalosImageInstaller, version); err != nil {
+				log.Printf("Error during automatic Node Upgrade : %v", err)
+				report := NodeUpdateReport{
+					NodeName:          node,
+					PreviousVersion:   installedVersion,
+					ImageSource:       TalosImageInstaller,
+					NewVersion:        version,
+					UpdateStatus:      "Failed",
+					AdditionalDetails: "Error during Upgrade Node by label",
+					Timestamp:         time.Now().Format("2006-01-02 15:04:05"),
+				}
+
+				subject := "Automatic Node Upgrade"
+				// Generate email body
+				emailBody, err := generateUpdateEmailBody(report)
+				if err != nil {
+					return
+				}
+
+				sendMail(subject, emailBody)
+			} else {
+				log.Printf("Operating system of %s Updated to : %s", node, TalosImageInstaller)
+				report := NodeUpdateReport{
+					NodeName:          node,
+					PreviousVersion:   installedVersion,
+					ImageSource:       TalosImageInstaller,
+					NewVersion:        version,
+					UpdateStatus:      "Success",
+					AdditionalDetails: "Node updated successfully without any issues",
+					Timestamp:         time.Now().Format("2006-01-02 15:04:05"),
+				}
+
+				subject := "Automatic Node Upgrade"
+				// Generate email body
+				emailBody, err := generateUpdateEmailBody(report)
+				if err != nil {
+					return
+				}
+
+				sendMail(subject, emailBody)
+			}
+		} else {
+			var msg = "apiSysUpgrades - Node " + node + " already at version " + version + " \n"
+			log.Printf(msg)
+		}
 	}
 	return
 }

@@ -8,8 +8,9 @@ images:
   
 # schedule configurations
 schedule:
-  sync_members: 1 # in Minutes
+  sync_members: 1 # Minutes
   sys_upgrade: 15
+  upgrade_safe_period: 0 # Days 
 
 # Talosctl configurations
 talosctl:
