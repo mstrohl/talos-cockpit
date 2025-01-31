@@ -2,11 +2,14 @@ package main
 
 import (
 	"log"
-	"math"
 	"time"
 
+	"github.com/gorhill/cronexpr"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+var MroUgradeTriggered bool
+var Done chan bool
 
 // scheduleClusterSync manage member list schedules
 func (m *TalosCockpit) scheduleClusterSync(sched time.Duration, endpoint string) {
@@ -31,14 +34,19 @@ func (m *TalosCockpit) scheduleClusterSync(sched time.Duration, endpoint string)
 // scheduleClusterSync manage cluster upgrade schedules
 func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint string) {
 	ticker := time.NewTicker(sched)
+	done := make(chan bool)
+	log.Println("Upgrade triggered ? ", MroUgradeTriggered)
+
 	go func() {
 		for {
 			select {
+			case <-done:
+				log.Println("Ticker Ends")
+				return
 			case <-ticker.C:
 				if err := m.fetchLatestRelease(); err != nil {
 					log.Printf("Échec de la récupération de la dernière version : %v", err)
 				}
-
 				if err := m.getTalosVersion(endpoint); err != nil {
 					log.Printf("Échec de la récupération de la version installée : %v", err)
 				}
@@ -53,72 +61,63 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 					log.Printf("Erreur de récupération de la liste des membres")
 					return
 				}
-				safeUpgradeDate := m.LatestReleaseDate.AddDate(0, 0, UpgradeSafePeriod)
-				log.Printf("No auto upgrade before %v for the latest release %s", safeUpgradeDate, m.LatestOsVersion)
-
-				timeLeft := safeUpgradeDate.Sub(time.Now().UTC())
-
+				nodeUpToDate := 0
+				nodeCount := len(members)
 				for _, member := range members {
 					if m.LatestOsVersion != member.InstalledVersion {
 						log.Printf("Latest version %s differs from Installed one %s on node %s", m.LatestOsVersion, member.InstalledVersion, member.MachineID)
 						if member.SysUpdate {
-
-							if timeLeft > time.Hour*24 {
-								days := math.Round(timeLeft.Hours() / 24)
-								log.Printf("%v days remaining for a safe Upgrade", days)
-							} else if timeLeft >= time.Second {
-								log.Printf("%v remainings for a safe Upgrade", timeLeft)
-							} else {
-								timeLeft := time.Now().UTC().Sub(safeUpgradeDate)
-								log.Printf("Safe upgrades available since %v", timeLeft)
-								log.Printf("Launching Upgrade schedule")
-
-								if err := m.upgradeSystem(member.Hostname, TalosImageInstaller); err != nil {
-									log.Printf("Error during automatic Node Upgrade : %v", err)
-									report := NodeUpdateReport{
-										NodeName:          member.Hostname,
-										PreviousVersion:   member.InstalledVersion,
-										ImageSource:       TalosImageInstaller,
-										NewVersion:        m.LatestOsVersion,
-										UpdateStatus:      "Failed",
-										AdditionalDetails: "Error during automatic Node Upgrade",
-										Timestamp:         time.Now().Format("2006-01-02 15:04:05"),
-									}
-
-									subject := "Automatic Node Upgrade"
-									// Generate email body
-									emailBody, err := generateUpdateEmailBody(report)
-									if err != nil {
-										return
-									}
-
-									sendMail(subject, emailBody)
-								} else {
-									log.Printf("Operating system of %s Updated to : %s", member.Hostname, TalosImageInstaller)
-									report := NodeUpdateReport{
-										NodeName:          member.Hostname,
-										PreviousVersion:   member.InstalledVersion,
-										ImageSource:       TalosImageInstaller,
-										NewVersion:        m.LatestOsVersion,
-										UpdateStatus:      "Success",
-										AdditionalDetails: "Node updated successfully without any issues",
-										Timestamp:         time.Now().Format("2006-01-02 15:04:05"),
-									}
-
-									subject := "Automatic Node Upgrade"
-									// Generate email body
-									emailBody, err := generateUpdateEmailBody(report)
-									if err != nil {
-										return
-									}
-
-									sendMail(subject, emailBody)
+							if err := m.upgradeSystem(member.Hostname, TalosImageInstaller); err != nil {
+								log.Printf("Error during automatic Node Upgrade : %v", err)
+								report := NodeUpdateReport{
+									NodeName:          member.Hostname,
+									PreviousVersion:   member.InstalledVersion,
+									ImageSource:       TalosImageInstaller,
+									NewVersion:        m.LatestOsVersion,
+									UpdateStatus:      "Failed",
+									AdditionalDetails: "Error during automatic Node Upgrade",
+									Timestamp:         time.Now().Format("2006-01-02 15:04:05"),
 								}
+
+								subject := "Automatic Node Upgrade"
+								// Generate email body
+								emailBody, err := generateUpdateEmailBody(report)
+								if err != nil {
+									return
+								}
+
+								sendMail(subject, emailBody)
+							} else {
+								nodeUpToDate++
+								log.Printf("%v/%v node up to date", nodeUpToDate, len(members))
+								log.Printf("Operating system of %s Updated to : %s", member.Hostname, TalosImageInstaller)
+								report := NodeUpdateReport{
+									NodeName:          member.Hostname,
+									PreviousVersion:   member.InstalledVersion,
+									ImageSource:       TalosImageInstaller,
+									NewVersion:        m.LatestOsVersion,
+									UpdateStatus:      "Success",
+									AdditionalDetails: "Node updated successfully without any issues",
+									Timestamp:         time.Now().Format("2006-01-02 15:04:05"),
+								}
+
+								subject := "Automatic Node Upgrade"
+								// Generate email body
+								emailBody, err := generateUpdateEmailBody(report)
+								if err != nil {
+									return
+								}
+
+								sendMail(subject, emailBody)
 							}
 						} else {
+							nodeUpToDate++
+							log.Printf("%v/%v node up to date", nodeUpToDate, len(members))
 							log.Printf("Automatic Node Upgrade disabled for node: %s", member.Hostname)
 						}
 					} else {
+						nodeUpToDate++
+						log.Printf("%v/%v node up to date", nodeUpToDate, len(members))
 						log.Printf("Node %s allready up to date", member.Hostname)
 					}
 				}
@@ -129,7 +128,86 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 						log.Printf("Échec de la mise à jour de Kubernetes : %v", err)
 					}
 				} else {
-					log.Printf("Auto Update Kubernetes désactivé pour le cluster: %s", clusterID)
+					log.Printf("Auto Update Kubernetes disabled for cluster: %s", clusterID)
+				}
+				// manage Ticker stop
+				if nodeUpToDate == nodeCount {
+					log.Printf("%v/%v node up to date", nodeUpToDate, len(members))
+					log.Println("scheduleClusterUpgrade All nodes ard Up to date")
+					done <- true
+				}
+
+			}
+		}
+	}()
+}
+
+// scheduleClusterSync manage cluster upgrade schedules
+func (m *TalosCockpit) scheduleSafeUpgrades(cfg Config) {
+	ticker := time.NewTicker(time.Duration(1) * time.Minute)
+
+	log.Println("scheduleSafeUpgrades - Upgrade triggered ? ", MroUgradeTriggered)
+	go func() {
+		for {
+			select {
+
+			case <-ticker.C:
+
+				if Mro >= time.Second && cfg.Schedule.MaintenanceWindow.Cron != "" {
+					// get maintenance window size
+
+					// To avoid maintenance overlap, no uprgade will be triggered in the last ten minutes
+					safeEnd := time.Minute * 1
+					//log.Println(Mro)
+					MROCron := cfg.Schedule.MaintenanceWindow.Cron
+					nextCron := cronexpr.MustParse(MROCron).Next(time.Now().UTC())
+					nextCronEnd := nextCron.Add(Mro)
+					db_start, db_end := m.getLastSched()
+					beforeStart := db_start.Sub(time.Now().UTC())
+					beforeEnd := db_end.Add(-safeEnd).Sub(time.Now().UTC())
+					// Use case at database startup
+					if db_start.IsZero() {
+						m.upsertSchedules(nextCron, nextCronEnd)
+						log.Printf("MRO - Maintenance has been planed to start %v until %v\n", nextCron, nextCronEnd)
+					} else if beforeStart < time.Second && beforeEnd > time.Minute {
+						// Proceed upgrade
+						log.Printf("MRO - Maintenance started since %v until %v\n", beforeStart, beforeEnd)
+						if !MroUgradeTriggered {
+							MroUgradeTriggered = true
+							safeUpgrade(m)
+							log.Println("MRO - Update has been triggered during the maintenance period")
+						} else {
+							log.Println("MRO - Update already running during the maintenance period")
+						}
+					} else if beforeEnd < time.Second {
+						// End of maintenance has been reached
+						MroUgradeTriggered = false
+						// Upsert database with the next schedule
+						m.upsertSchedules(nextCron, nextCronEnd)
+						log.Printf("MRO - New maintenance has been planed to start %v until %v\n", nextCron, nextCronEnd)
+					} else if beforeStart > time.Second || (beforeStart < time.Second && beforeEnd < time.Minute) {
+						MroUgradeTriggered = false
+						log.Printf("MRO - Waiting for next maintenance planed at %v until %v\n", db_start, db_end)
+						log.Println("MRO_Cron: ", MROCron)
+						log.Println("MRO_NextStart: ", nextCron)
+						log.Println("MRO_NextEnd: ", nextCronEnd)
+						log.Println("MRO_DB_NextStart: ", db_start)
+						log.Println("MRO_DB_NextEnd: ", db_end)
+						log.Println("MRO_DB_timeleft_Start: ", beforeStart)
+						log.Println("MRO_DB_timeleft_End: ", beforeEnd)
+					} else {
+						MroUgradeTriggered = false
+						log.Println("MRO - Unindentified usecase - Debugging vars")
+						log.Println("MRO_Cron: ", MROCron)
+						log.Println("MRO_NextStart: ", nextCron)
+						log.Println("MRO_NextEnd: ", nextCronEnd)
+						log.Println("MRO_DB_NextStart: ", db_start)
+						log.Println("MRO_DB_NextEnd: ", db_end)
+						log.Println("MRO_DB_timeleft_Start: ", beforeStart)
+						log.Println("MRO_DB_timeleft_End: ", beforeEnd)
+					}
+				} else {
+					safeUpgrade(m)
 				}
 			}
 		}

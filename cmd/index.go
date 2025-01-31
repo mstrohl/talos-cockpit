@@ -13,16 +13,18 @@ import (
 )
 
 type DashboardData struct {
-	ClientIP         string
-	ClusterID        string
-	LatestOsVersion  string
-	LastPreRelease   string
-	SyncSched        time.Duration
-	UpgradeSched     time.Duration
-	NodeCount        int
-	NodeData         []v1.Node
-	LatestK8sVersion string
-	TalosctlVersion  string
+	ClientIP            string
+	ClusterID           string
+	LatestOsVersion     string
+	LastPreRelease      string
+	SyncSched           time.Duration
+	UpgradeSched        time.Duration
+	NodeCount           int
+	NodeData            []v1.Node
+	LatestK8sVersion    string
+	TalosctlVersion     string
+	MaintenanceDuration time.Duration
+	SafetyPeriod        int
 }
 
 // Render index/dashboard template
@@ -63,16 +65,18 @@ func handleIndex(w http.ResponseWriter, m *TalosCockpit) {
 	}
 
 	DashboardData := DashboardData{
-		ClientIP:         clientIP,
-		ClusterID:        clusterID,
-		LatestOsVersion:  m.LatestOsVersion,
-		LatestK8sVersion: m.K8sVersionAvailable,
-		TalosctlVersion:  cliVersion,
-		SyncSched:        SyncSched,
-		UpgradeSched:     UpgradeSched,
-		LastPreRelease:   LastPreRelease,
-		NodeCount:        len(nodes),
-		NodeData:         data,
+		ClientIP:            clientIP,
+		ClusterID:           clusterID,
+		LatestOsVersion:     m.LatestOsVersion,
+		LatestK8sVersion:    m.K8sVersionAvailable,
+		TalosctlVersion:     cliVersion,
+		SyncSched:           SyncSched,
+		UpgradeSched:        UpgradeSched,
+		LastPreRelease:      LastPreRelease,
+		NodeCount:           len(nodes),
+		NodeData:            data,
+		SafetyPeriod:        UpgradeSafePeriod,
+		MaintenanceDuration: time.Duration(Mro),
 	}
 
 	templmanager.RenderTemplate(w, "index.tmpl", DashboardData)

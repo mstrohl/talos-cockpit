@@ -37,6 +37,12 @@ func (m *TalosCockpit) initDatabase() error {
 			auto_k8s_update TEXT
 		);
 
+		CREATE TABLE IF NOT EXISTS schedules (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			next_window DATETIME,
+			next_close DATETIME
+		);
+
 		CREATE TABLE IF NOT EXISTS cluster_members (
 			cluster_id TEXT,
 			namespace TEXT,
@@ -258,6 +264,35 @@ func (m *TalosCockpit) updateMemberInfo(members []ClusterMember) error {
 	return tx.Commit()
 }
 
+
+// upsertSchedules insert or replace schedules
+func (m *TalosCockpit) upsertSchedules(next_window time.Time, next_close time.Time) (int, error) {
+	result, err := m.db.Exec(`
+		INSERT OR REPLACE INTO schedules (next_window, next_close) 
+		VALUES (?, ?)
+	`, next_window, next_close)
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := result.LastInsertId()
+	return int(id), err
+}
+
+// getClusterMembers get members of a cluster from database
+func (m *TalosCockpit) getLastSched() (time.Time, time.Time) {
+	//fmt.Printf("SELECT name, endpoint, auto_k8s_update FROM clusters WHERE cluster_id = %s", clusterID)
+	var start, end time.Time
+	// Query for a value based on a single row.
+	if err := m.db.QueryRow("SELECT next_window, next_close FROM schedules WHERE id = (SELECT MAX(id) FROM schedules);").Scan(&start, &end); err != nil {
+		if err == sql.ErrNoRows {
+			log.Println("getLastSched: no rows")
+			return time.Time{}, time.Time{}
+		}
+		log.Fatalln("getLastSched : ", err)
+	}
+	return start, end
+}
 // Get member information needed to edit system upgrade configuration of a node
 func getMemberInfo(member_id string, db *sql.DB) ClusterMember {
 	// Get memberID
@@ -285,5 +320,4 @@ func getMemberInfo(member_id string, db *sql.DB) ClusterMember {
 		}
 	}
 	return member
-
 }

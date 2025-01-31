@@ -71,6 +71,18 @@
                 <div class="title">Auto Upgrade</div>
             </div>
         </div>
+        {{ if not .MaintenanceDuration }}
+        <div class="tile info">{{else}}
+        <div class="tile config">{{end}}
+            <div class="header">
+                {{ if not .MaintenanceDuration }}
+                <div class="title"><br>Mode<br>disabled</div>
+                {{else}}<div id="maintenance" class="count">{{ .MaintenanceDuration }}</div>{{end}}
+            </div>
+            <div class="body">
+                <div class="title">Maintenance Window</div>
+            </div>
+        </div>
     </div>
     <br>
     <h3> Cluster details <h3>
