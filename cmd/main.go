@@ -41,8 +41,7 @@ var (
 	kubeconfig          *string
 	K8sVersionAvailable string
 	UpgradeSafePeriod   = 7
-	Mro                 Any
-
+	Mro                 time.Duration
 )
 
 // Cluster contain kubernetes cluster information
@@ -295,7 +294,6 @@ func main() {
 		Mro = time.Minute * time.Duration(cfg.Schedule.MaintenanceWindow.Duration*60)
 		log.Println("MRO minute: ", Mro)
 	}
-
 
 	log.Println("Upgrade Grace Period (days): ", UpgradeSafePeriod)
 	////// CFG Images

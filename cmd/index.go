@@ -23,7 +23,7 @@ type DashboardData struct {
 	NodeData            []v1.Node
 	LatestK8sVersion    string
 	TalosctlVersion     string
-	MaintenanceDuration any
+	MaintenanceDuration time.Duration
 	SafetyPeriod        int
 }
 
@@ -63,12 +63,6 @@ func handleIndex(w http.ResponseWriter, m *TalosCockpit) {
 	if err != nil {
 		log.Printf("Fail to get talosctl cli version : %v", err)
 	}
-	var md any
-	if Mro > 0 {
-		md = time.Duration(Mro)
-	} else {
-		md = false
-	}
 
 	DashboardData := DashboardData{
 		ClientIP:            clientIP,
@@ -82,7 +76,7 @@ func handleIndex(w http.ResponseWriter, m *TalosCockpit) {
 		NodeCount:           len(nodes),
 		NodeData:            data,
 		SafetyPeriod:        UpgradeSafePeriod,
-		MaintenanceDuration: md,
+		MaintenanceDuration: time.Duration(Mro),
 	}
 
 	templmanager.RenderTemplate(w, "index.tmpl", DashboardData)
