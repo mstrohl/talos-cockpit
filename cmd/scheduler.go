@@ -143,7 +143,7 @@ func (m *TalosCockpit) scheduleClusterUpgrade(sched time.Duration, endpoint stri
 }
 
 // scheduleClusterSync manage cluster upgrade schedules
-func (m *TalosCockpit) scheduleSafeUpgrades(cfg Config) {
+func (m *TalosCockpit) scheduleSafeUpgrade(cfg Config) {
 	ticker := time.NewTicker(time.Duration(1) * time.Minute)
 
 	log.Println("scheduleSafeUpgrades - Upgrade triggered ? ", MroUgradeTriggered)

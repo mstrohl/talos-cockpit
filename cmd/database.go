@@ -264,7 +264,6 @@ func (m *TalosCockpit) updateMemberInfo(members []ClusterMember) error {
 	return tx.Commit()
 }
 
-
 // upsertSchedules insert or replace schedules
 func (m *TalosCockpit) upsertSchedules(next_window time.Time, next_close time.Time) (int, error) {
 	result, err := m.db.Exec(`
@@ -279,7 +278,7 @@ func (m *TalosCockpit) upsertSchedules(next_window time.Time, next_close time.Ti
 	return int(id), err
 }
 
-// getClusterMembers get members of a cluster from database
+// getLastSched last schedule from database
 func (m *TalosCockpit) getLastSched() (time.Time, time.Time) {
 	//fmt.Printf("SELECT name, endpoint, auto_k8s_update FROM clusters WHERE cluster_id = %s", clusterID)
 	var start, end time.Time
@@ -293,6 +292,7 @@ func (m *TalosCockpit) getLastSched() (time.Time, time.Time) {
 	}
 	return start, end
 }
+
 // Get member information needed to edit system upgrade configuration of a node
 func getMemberInfo(member_id string, db *sql.DB) ClusterMember {
 	// Get memberID

@@ -511,9 +511,10 @@ func main() {
 	// Schedules
 
 	manager.scheduleClusterSync(SyncSched, TalosApiEndpoint)
-	manager.scheduleSafeUpgrades(cfg)
+	manager.scheduleSafeUpgrade(cfg)
 
-	manager.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
+	//manager.scheduleClusterUpgrade(UpgradeSched, TalosApiEndpoint)
+
 	//////////////////////////////////
 	// K8S API Calls
 	//
