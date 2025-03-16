@@ -28,9 +28,9 @@ RUN go build  -ldflags="-X 'main.Version=$APP_VERSION'" -v -o server ./cmd/
 # https://docs.docker.com/develop/develop-images/multistage-build/#use-multi-stage-builds
 FROM debian:bookworm-slim
 
-ARG TALOS_VERSION=v1.9.3
-ARG K8S_VERSION=1.32.1
-ARG YQ_VERSION=v4.44.5
+ARG TALOS_VERSION=v1.9.4
+ARG K8S_VERSION=1.32.2
+ARG YQ_VERSION=v4.45.1
 
 RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     ca-certificates curl jq && \

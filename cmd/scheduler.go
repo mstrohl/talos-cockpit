@@ -172,21 +172,26 @@ func (m *TalosCockpit) scheduleSafeUpgrade(cfg Config) {
 					} else if beforeStart < time.Second && beforeEnd > time.Minute {
 						// Proceed upgrade
 						log.Printf("MRO - Maintenance started since %v until %v\n", beforeStart, beforeEnd)
-						if !MroUgradeTriggered {
-							MroUgradeTriggered = true
-							safeUpgrade(m)
-							log.Println("MRO - Update has been triggered during the maintenance period")
-						} else {
-							log.Println("MRO - Update already running during the maintenance period")
-						}
+						// Disabled to test MRO + grace period
+						//if !MroUgradeTriggered {
+						//	MroUgradeTriggered = true
+						//	safeUpgrade(m)
+						//	log.Println("MRO - Update has been triggered during the maintenance period")
+						//} else {
+						//	log.Println("MRO - Update already running during the maintenance period")
+						//}
+						safeUpgrade(m)
+						log.Println("MRO - Update has been triggered during the maintenance period")
 					} else if beforeEnd < time.Second {
 						// End of maintenance has been reached
-						MroUgradeTriggered = false
+						// Disabled to test MRO + grace period
+						//MroUgradeTriggered = false
 						// Upsert database with the next schedule
 						m.upsertSchedules(nextCron, nextCronEnd)
 						log.Printf("MRO - New maintenance has been planed to start %v until %v\n", nextCron, nextCronEnd)
 					} else if beforeStart > time.Second || (beforeStart < time.Second && beforeEnd < time.Minute) {
-						MroUgradeTriggered = false
+						// Disabled to test MRO + grace period
+						//MroUgradeTriggered = false
 						log.Printf("MRO - Waiting for next maintenance planed at %v until %v\n", db_start, db_end)
 						log.Println("MRO_Cron: ", MROCron)
 						log.Println("MRO_NextStart: ", nextCron)
@@ -196,7 +201,8 @@ func (m *TalosCockpit) scheduleSafeUpgrade(cfg Config) {
 						log.Println("MRO_DB_timeleft_Start: ", beforeStart)
 						log.Println("MRO_DB_timeleft_End: ", beforeEnd)
 					} else {
-						MroUgradeTriggered = false
+						// Disabled to test MRO + grace period
+						//MroUgradeTriggered = false
 						log.Println("MRO - Unindentified usecase - Debugging vars")
 						log.Println("MRO_Cron: ", MROCron)
 						log.Println("MRO_NextStart: ", nextCron)
